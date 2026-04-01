@@ -12,6 +12,7 @@ from blinkdesk.cli.config import (
     cmd_config_set,
 )
 from blinkdesk.cli.db import cmd_db_backup, cmd_db_vacuum, cmd_init
+from blinkdesk.cli.mcp import add_mcp_subparser
 from blinkdesk.cli.ticket import (
     cmd_ticket_comment,
     cmd_ticket_create,
@@ -158,6 +159,9 @@ def main() -> None:
 
     config_list = p_config_sub.add_parser("list", help="List all config values")
     config_list.set_defaults(func=cmd_config_list)
+
+    # mcp
+    add_mcp_subparser(subparsers)
 
     args = parser.parse_args()
 

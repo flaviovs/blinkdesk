@@ -76,6 +76,24 @@ class TicketStateMachine:
             return None
         return TicketState.from_row(row)
 
+    def get_state_by_slug(self, slug: str) -> TicketState | None:
+        """Get a state by its slug.
+
+        Args:
+            slug: Slug of the state.
+
+        Returns:
+            The TicketState if found, None otherwise.
+        """
+        cursor = self._conn.execute(
+            "SELECT state_id, slug, name FROM ticket_states WHERE slug = ?",
+            (slug,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return TicketState.from_row(row)
+
     def create_state(self, slug: str, name: str) -> TicketState:
         """Create a new ticket state.
 

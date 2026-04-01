@@ -248,13 +248,36 @@ class TicketingSystem:
             return None
         return self._ticket_from_row(row)
 
-    def list_tickets(self) -> list[Ticket]:
+    def list_tickets(
+        self,
+        state: TicketState | None = None,
+        assignee: Entity | None = None,
+    ) -> list[Ticket]:
         """List all tickets.
+
+        Args:
+            state: Optional state to filter by.
+            assignee: Optional assignee to filter by.
 
         Returns:
             List of all tickets ordered by ticket_id.
         """
-        cursor = self._conn.execute(f"{_TICKET_SELECT_QUERY} ORDER BY t.ticket_id")
+        query = _TICKET_SELECT_QUERY
+        conditions: list[str] = []
+        params: list[int | str] = []
+
+        if state:
+            conditions.append("ts.state_id = ?")
+            params.append(state.state_id)
+        if assignee:
+            conditions.append("t.assignee_entity_id = ?")
+            params.append(assignee.entity_id)
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY t.ticket_id"
+
+        cursor = self._conn.execute(query, params)
         return [self._ticket_from_row(row) for row in cursor.fetchall()]
 
     def update_ticket(
