@@ -56,6 +56,8 @@ def main() -> None:
     lst.add_argument(
         "-f", "--output-format", choices=["json", "table"], default="table"
     )
+    lst.add_argument("-s", "--state", help="Filter by state slug (e.g., open, closed)")
+    lst.add_argument("-a", "--assignee", help="Filter by assignee slug")
     lst.set_defaults(func=cmd_ticket_list)
 
     # ticket get

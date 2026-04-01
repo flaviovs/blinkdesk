@@ -45,7 +45,21 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
     db_path = _get_database_path(args)
     system = TicketingSystem(db_path)
     try:
-        tickets = system.list_tickets()
+        state = None
+        if args.state:
+            state = system._state_machine.get_state_by_slug(args.state)
+            if state is None:
+                print(f"State not found: {args.state}", file=sys.stderr)
+                sys.exit(1)
+
+        assignee = None
+        if args.assignee:
+            assignee = system.get_entity_by_slug(args.assignee)
+            if assignee is None:
+                print(f"Assignee not found: {args.assignee}", file=sys.stderr)
+                sys.exit(1)
+
+        tickets = system.list_tickets(state=state, assignee=assignee)
         prefix = system.display_prefix
         data = [
             {

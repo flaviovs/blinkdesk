@@ -8,6 +8,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- Filter options (`-s/--state`, `-a/--assignee`) for `ticket list` command
 - MCP server support with FastMCP
 - New CLI commands: `bd mcp stdio`, `bd mcp streamable-http`, `bd mcp sse`
 - MCP tools: ticket_list, ticket_get, ticket_create, ticket_update, ticket_comment_add, entity_list, entity_get
