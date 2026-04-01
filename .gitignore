@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+*.egg-info/
+/.venv/
+.*_cache/
+.ruff_cache/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
