@@ -121,6 +121,11 @@ PEP8
 - Always use parameterized queries (no string formatting)
 - Use `WITHOUT ROWID` for tables with composite PKs
 
+### Testing
+
+- **All changes must include unit tests**
+- Write tests for new functionality, bug fixes, and refactoring
+
 ### API Design
 
 - `TicketingSystem` is the main entry point
