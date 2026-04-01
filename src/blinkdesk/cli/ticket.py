@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from blinkdesk import TicketingSystem
-from blinkdesk.cli import (
+from ._helpers import (
     _format_json,
     _format_table,
     _get_database_path,

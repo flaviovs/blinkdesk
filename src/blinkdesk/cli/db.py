@@ -6,7 +6,7 @@ import sqlite3
 import sys
 
 from blinkdesk import init_db
-from blinkdesk.cli import _get_database_path
+from ._helpers import _get_database_path
 from blinkdesk.init import seed_db
 
 

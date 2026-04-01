@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from blinkdesk import TicketingSystem
-from blinkdesk.cli import _get_database_path
+from ._helpers import _get_database_path
 
 
 def cmd_config_get(args: argparse.Namespace) -> None:
