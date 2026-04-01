@@ -9,7 +9,9 @@ from .config import (
     cmd_config_set,
 )
 from .db import cmd_db_backup, cmd_db_vacuum, cmd_init
+from .entity import cmd_entity_list
 from .mcp import add_mcp_subparser
+from .state import cmd_state_list
 from .ticket import (
     cmd_ticket_comment,
     cmd_ticket_create,
@@ -108,6 +110,20 @@ def main() -> None:
 
     config_list = p_config_sub.add_parser("list", help="List all config values")
     config_list.set_defaults(func=cmd_config_list)
+
+    # entity
+    p_entity = subparsers.add_parser("entity", help="Entity operations")
+    p_entity_sub = p_entity.add_subparsers(dest="entity_command", required=True)
+
+    entity_list = p_entity_sub.add_parser("list", help="List all entities")
+    entity_list.set_defaults(func=cmd_entity_list)
+
+    # state
+    p_state = subparsers.add_parser("state", help="State operations")
+    p_state_sub = p_state.add_subparsers(dest="state_command", required=True)
+
+    state_list = p_state_sub.add_parser("list", help="List all states")
+    state_list.set_defaults(func=cmd_state_list)
 
     # mcp
     add_mcp_subparser(subparsers)
