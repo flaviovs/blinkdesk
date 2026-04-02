@@ -6,6 +6,10 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [0.2.0] - 2026-04-01
 
+### Fixed
+
+- `bd init` now correctly parses TOML list format (`[[entities]]`, `[[states]]`, `[[transitions]]`) in schema files
+
 ### Added
 
 - CLI commands `entity list` and `state list`

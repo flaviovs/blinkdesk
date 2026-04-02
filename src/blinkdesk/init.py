@@ -9,6 +9,29 @@ import tomllib
 from blinkdesk._db import init_db as _init_db
 
 
+def _convert_list_to_dict(items: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
+    """Convert a list of items to a dict keyed by slug."""
+    result = {}
+    for item in items:
+        slug = item.get("slug", item.get("name", "").lower().replace(" ", "-"))
+        result[slug] = {"name": item.get("name", slug)}
+    return result
+
+
+def _convert_transitions_list(
+    transitions: list[dict[str, str]],
+) -> dict[str, list[str]]:
+    """Convert a list of transitions to dict keyed by from_state."""
+    result: dict[str, list[str]] = {}
+    for trans in transitions:
+        from_slug = trans.get("from_state", "").lower().replace(" ", "-")
+        to_slug = trans.get("to_state", "").lower().replace(" ", "-")
+        if from_slug not in result:
+            result[from_slug] = []
+        result[from_slug].append(to_slug)
+    return result
+
+
 def init_db(db_path: str) -> sqlite3.Connection:
     """Initialize a new database.
 
@@ -45,9 +68,11 @@ def seed_db(db_path: str, config_path: str) -> None:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
-        _seed_entities(conn, config.get("entities", {}))
-        _seed_states(conn, config.get("states", {}))
-        _seed_transitions(conn, config.get("transitions", {}))
+        _seed_entities(conn, _convert_list_to_dict(config.get("entities", [])))
+        _seed_states(conn, _convert_list_to_dict(config.get("states", [])))
+        _seed_transitions(
+            conn, _convert_transitions_list(config.get("transitions", []))
+        )
         _seed_options(conn, config.get("options", {}))
     finally:
         conn.close()
