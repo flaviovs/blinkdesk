@@ -10,6 +10,7 @@ A lightweight ticketing system using SQLite with no external dependencies (Pytho
 - Comments on tickets
 - Audit logging
 - Configuration options
+- MCP (Model Context Protocol) server for integration with AI assistants
 
 ## Installation
 
@@ -102,11 +103,47 @@ bd -d db.db init config.toml
 bd -d db.db config get <key>
 bd -d db.db config set <key> <value>
 bd -d db.db config list
+
+### MCP Operations
+
+```bash
+bd -d db.db mcp stdio
+```
+Start the MCP server for AI assistant integration via stdio.
 ```
 
 ## Environment Variables
 
 - `BLINKDESK_DATABASE` - Path to the database file (alternative to `-d` flag)
+
+## MCP Integration
+
+Blink Desk provides an MCP server that allows AI assistants to interact with the ticketing system. The MCP server exposes tools for:
+
+- Listing and searching tickets
+- Creating new tickets
+- Updating ticket state
+- Adding comments
+- Managing entities
+
+To start the MCP server:
+
+```bash
+bd -d db.db mcp stdio
+```
+
+Add to your AI assistant configuration:
+
+```json
+{
+  "mcpServers": {
+    "blinkdesk": {
+      "command": "bd",
+      "args": ["-d", "/path/to/db.db", "mcp", "stdio"]
+    }
+  }
+}
+```
 
 ## Development
 
