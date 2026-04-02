@@ -434,6 +434,8 @@ class TestBlinkDesk(unittest.TestCase):
             ticket_id=ticket.id,
             output_format="table",
             slug=False,
+            no_logs=False,
+            no_comments=False,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -443,6 +445,8 @@ class TestBlinkDesk(unittest.TestCase):
         self.assertIn("Alice", output)
 
         args.slug = True
+        args.no_logs = True
+        args.no_comments = True
         out = io.StringIO()
         with redirect_stdout(out):
             cmd_ticket_get(args)
@@ -469,6 +473,8 @@ class TestBlinkDesk(unittest.TestCase):
             ticket_id=ticket.id,
             output_format="json",
             slug=False,
+            no_logs=False,
+            no_comments=False,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -516,6 +522,8 @@ class TestBlinkDesk(unittest.TestCase):
             ticket_id=ticket.id,
             output_format="table",
             slug=False,
+            no_logs=False,
+            no_comments=False,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -524,6 +532,150 @@ class TestBlinkDesk(unittest.TestCase):
 
         self.assertIn("ID:      BD-1", output)
         self.assertNotIn("BD-BD-1", output)
+
+    def test_ticket_get_table_includes_logs_and_comments(self) -> None:
+        data = {
+            "entities": [{"name": "Alice", "slug": "alice"}],
+            "states": [{"name": "Open", "slug": "open"}],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.add_comment(ticket, entity, "Test comment")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            output_format="table",
+            slug=False,
+            no_logs=False,
+            no_comments=False,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_get(args)
+        output = out.getvalue()
+        self.assertIn("Logs:", output)
+        self.assertIn("Comments:", output)
+        self.assertIn("Test comment", output)
+
+    def test_ticket_get_json_includes_logs_and_comments(self) -> None:
+        data = {
+            "entities": [{"name": "Alice", "slug": "alice"}],
+            "states": [{"name": "Open", "slug": "open"}],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.add_comment(ticket, entity, "Test comment")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            output_format="json",
+            slug=False,
+            no_logs=False,
+            no_comments=False,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_get(args)
+        output = json.loads(out.getvalue())
+
+        self.assertIn("logs", output)
+        self.assertIn("comments", output)
+        self.assertEqual(len(output["logs"]), 1)
+        self.assertEqual(len(output["comments"]), 1)
+        self.assertEqual(output["comments"][0]["comment"], "Test comment")
+
+    def test_ticket_get_json_excludes_logs(self) -> None:
+        data = {
+            "entities": [{"name": "Alice", "slug": "alice"}],
+            "states": [{"name": "Open", "slug": "open"}],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.add_comment(ticket, entity, "Test comment")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            output_format="json",
+            slug=False,
+            no_logs=True,
+            no_comments=False,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_get(args)
+        output = json.loads(out.getvalue())
+
+        self.assertNotIn("logs", output)
+        self.assertIn("comments", output)
+
+    def test_ticket_get_json_excludes_comments(self) -> None:
+        data = {
+            "entities": [{"name": "Alice", "slug": "alice"}],
+            "states": [{"name": "Open", "slug": "open"}],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.add_comment(ticket, entity, "Test comment")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            output_format="json",
+            slug=False,
+            no_logs=False,
+            no_comments=True,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_get(args)
+        output = json.loads(out.getvalue())
+
+        self.assertIn("logs", output)
+        self.assertNotIn("comments", output)
+
+    def test_ticket_get_table_excludes_logs_and_comments_with_flags(self) -> None:
+        data = {
+            "entities": [{"name": "Alice", "slug": "alice"}],
+            "states": [{"name": "Open", "slug": "open"}],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.add_comment(ticket, entity, "Test comment")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            output_format="table",
+            slug=False,
+            no_logs=True,
+            no_comments=True,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_get(args)
+        output = out.getvalue()
+
+        self.assertNotIn("Logs:", output)
+        self.assertNotIn("Comments:", output)
+        self.assertNotIn("Test comment", output)
 
     def test_mcp_not_found_uses_display_prefix(self) -> None:
         data = {

@@ -6,6 +6,10 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `bd ticket get` now shows logs and comments by default. Use `--no-logs` / `-L` and `--no-comments` / `-C` to hide them.
+
 ### Fixed
 
 - Ticket ID display prefix is now applied exactly once in CLI table output and is now respected by MCP "ticket not found" errors

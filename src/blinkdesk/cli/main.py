@@ -82,6 +82,12 @@ def main() -> None:
     get.add_argument(
         "--slug", action="store_true", help="Show slug instead of name in table output"
     )
+    get.add_argument(
+        "-L", "--no-logs", action="store_true", help="Don't show ticket logs"
+    )
+    get.add_argument(
+        "-C", "--no-comments", action="store_true", help="Don't show ticket comments"
+    )
     get.set_defaults(func=cmd_ticket_get)
 
     # ticket comment

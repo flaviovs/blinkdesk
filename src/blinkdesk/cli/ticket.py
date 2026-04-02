@@ -5,9 +5,13 @@ import sys
 
 from blinkdesk import TicketingSystem
 from ._helpers import (
+    _comment_to_dict,
+    _format_comments_table,
     _format_json,
+    _format_logs_table,
     _format_table,
     _get_database_path,
+    _log_to_dict,
 )
 
 
@@ -109,6 +113,10 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
             ticket_id = system.format_ticket_id(args.ticket_id)
             print(f"Ticket not found: {ticket_id}", file=sys.stderr)
             sys.exit(1)
+
+        logs = [] if args.no_logs else system.get_ticket_logs(ticket)
+        comments = [] if args.no_comments else system.get_ticket_comments(ticket)
+
         data = {
             "id": ticket.id,
             "title": ticket.title,
@@ -123,6 +131,10 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
         if args.output_format == "json":
             if prefix:
                 data["id"] = f"{prefix}{data['id']}"
+            if not args.no_logs:
+                data["logs"] = [_log_to_dict(log) for log in logs]
+            if not args.no_comments:
+                data["comments"] = [_comment_to_dict(comment) for comment in comments]
             _format_json(data)
         else:
             if args.slug:
@@ -136,6 +148,8 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
                     "description": data["description"],
                 }
             _format_table([], data, prefix=prefix)
+            _format_logs_table(logs)
+            _format_comments_table(comments)
     finally:
         system.close()
 
