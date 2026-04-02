@@ -1,0 +1,98 @@
+# Blink Desk Configuration Example
+# 
+# This is a simple Kanban-style workflow: TODO -> IN_PROGRESS -> DONE
+# Copy this file and customize it for your needs.
+
+# =============================================================================
+# ENTITIES
+# =============================================================================
+# Entities are the people or teams who can own and interact with tickets.
+# Each entity needs a unique slug (identifier) and a display name.
+# 
+# Common use cases:
+# - Individual team members: "alice", "bob", "charlie"
+# - Team groups: "frontend", "backend", "support"
+# - Automated agents: "ai", "github-bot"
+
+[[entities]]
+slug = "alice"
+name = "Alice"
+
+[[entities]]
+slug = "bob"
+name = "Bob"
+
+[[entities]]
+slug = "charlie"
+name = "Charlie"
+
+# =============================================================================
+# STATES
+# =============================================================================
+# States represent the stages a ticket can be in. Design these to match
+# your workflow. Simple workflows might have 3 states, complex ones might
+# have 6-10.
+#
+# Each state needs:
+# - slug: machine-readable identifier (used in API, filters)
+# - name: human-readable display name
+
+# New tickets land here
+[[states]]
+slug = "todo"
+name = "TODO"
+
+# Work is actively in progress
+[[states]]
+slug = "in_progress"
+name = "IN PROGRESS"
+
+# Task is complete
+[[states]]
+slug = "done"
+name = "DONE"
+
+# =============================================================================
+# TRANSITIONS
+# =============================================================================
+# Transitions define which state changes are allowed. Without a transition
+# defined, a state change will be rejected.
+#
+# Format:
+# - from_state: the current state (must match a state slug above)
+# - to_state: the state to move to (must match a state slug above)
+#
+# This example allows:
+# - TODO -> IN_PROGRESS (starting work)
+# - TODO -> DONE (completing directly, e.g. quick tasks)
+# - IN_PROGRESS -> TODO (putting back)
+# - IN_PROGRESS -> DONE (finishing work)
+
+[[transitions]]
+from_state = "todo"
+to_state = "in_progress"
+
+[[transitions]]
+from_state = "todo"
+to_state = "done"
+
+[[transitions]]
+from_state = "in_progress"
+to_state = "todo"
+
+[[transitions]]
+from_state = "in_progress"
+to_state = "done"
+
+# =============================================================================
+# OPTIONS
+# =============================================================================
+# Optional configuration for system behavior.
+
+[options]
+# Prefix shown before ticket IDs when displaying (e.g., "#42" or "TICKET-42")
+display_prefix = "#"
+
+# If true, prevents creating new entities via API/CLI after initial setup.
+# Set to true for fixed teams, false for dynamic environments.
+lock_entities = false
