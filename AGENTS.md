@@ -79,8 +79,24 @@ bd -d $VIRTUAL_ENV/tmp/test.db ticket create --title "Test ticket"
 - Python 3.11+
 - No external dependencies
 - Use unittest
+- Run unittest/lint/type checks only when Python files (`*.py`) changed
 - Always use type hints
 - Use absolute imports
 - Add Google Standard docstrings to public APIs
 - All changes need unit tests
 - Document user-facing changes in CHANGELOG.md
+
+## Version Handling
+- Version is in `src/blinkdesk/__init__.py`
+- Determine bump level according to changes since last version
+- Use Semantic Versioning: patch for bug fixes, minor for new features
+- Never bump major unless explicitly requested
+- After bumping version, you must ensure that `CHANGELOG.md` is updated
+
+## Git Guidelines
+
+- Do not use write commands (`git branch`, `git rebase`, etc.) unless explicitly permitted.
+- Never run `git push`.
+- Commit only when explicitly requested by the user.
+- Keep commit titles under 50 characters.
+- Add a body only if strictly necessary; when added, wrap text at 72 columns.
