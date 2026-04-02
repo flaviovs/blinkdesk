@@ -64,6 +64,33 @@ def cmd_db_set_vacuum_mode(args: argparse.Namespace) -> None:
         conn.close()
 
 
+def cmd_db_get_journal_mode(args: argparse.Namespace) -> None:
+    """Get the current journal mode."""
+    db_path = _get_database_path(args)
+
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.execute("PRAGMA journal_mode")
+        mode = cursor.fetchone()[0]
+        print(mode.lower())
+    finally:
+        conn.close()
+
+
+def cmd_db_set_journal_mode(args: argparse.Namespace) -> None:
+    """Set the journal mode."""
+    db_path = _get_database_path(args)
+    mode = args.mode.upper()
+
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.execute(f"PRAGMA journal_mode = {mode}")
+        applied_mode = cursor.fetchone()[0]
+        print(f"Database journal_mode set to: {applied_mode.lower()}")
+    finally:
+        conn.close()
+
+
 def cmd_db_backup(args: argparse.Namespace) -> None:
     """Backup the database to a file."""
     db_path = _get_database_path(args)

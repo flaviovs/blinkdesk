@@ -10,7 +10,9 @@ from .config import (
 )
 from .db import (
     cmd_db_backup,
+    cmd_db_get_journal_mode,
     cmd_db_get_vacuum_mode,
+    cmd_db_set_journal_mode,
     cmd_db_set_vacuum_mode,
     cmd_db_vacuum,
     cmd_init,
@@ -104,6 +106,12 @@ def main() -> None:
     )
     db_get_vacuum_mode.set_defaults(func=cmd_db_get_vacuum_mode)
 
+    db_get_journal_mode = db_get_sub.add_parser(
+        "journal_mode",
+        help="Get journal mode",
+    )
+    db_get_journal_mode.set_defaults(func=cmd_db_get_journal_mode)
+
     db_set = p_db_sub.add_parser("set", help="Set database option")
     db_set_sub = db_set.add_subparsers(dest="db_set_key", required=True)
     db_set_vacuum_mode = db_set_sub.add_parser(
@@ -116,6 +124,17 @@ def main() -> None:
         help="Auto vacuum mode",
     )
     db_set_vacuum_mode.set_defaults(func=cmd_db_set_vacuum_mode)
+
+    db_set_journal_mode = db_set_sub.add_parser(
+        "journal_mode",
+        help="Set journal mode",
+    )
+    db_set_journal_mode.add_argument(
+        "mode",
+        choices=["delete", "truncate", "persist", "memory", "wal", "off"],
+        help="SQLite journal mode",
+    )
+    db_set_journal_mode.set_defaults(func=cmd_db_set_journal_mode)
 
     # init
     p_init = subparsers.add_parser("init", help="Initialize a new database")
