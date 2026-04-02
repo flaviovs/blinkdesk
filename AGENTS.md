@@ -52,7 +52,7 @@ Main command is `bd`:
 
 ```bash
 # Initialize database
-bd -d mydb.db init config.toml
+bd -d mydb.db init schema.toml
 
 # Create ticket
 bd -d mydb.db ticket create --title "Issue"
@@ -68,7 +68,7 @@ For testing, create databases in `$VIRTUAL_ENV/tmp` to avoid cluttering the work
 
 ```bash
 # Create test database for testing
-bd -d $VIRTUAL_ENV/tmp/test.db init config.toml
+bd -d $VIRTUAL_ENV/tmp/test.db init schema.toml
 
 # Run tests with the test database
 bd -d $VIRTUAL_ENV/tmp/test.db ticket create --title "Test ticket"

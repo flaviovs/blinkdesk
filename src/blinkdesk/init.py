@@ -1,4 +1,4 @@
-"""Database initialization and seeding from TOML config."""
+"""Database initialization and seeding from a TOML schema file."""
 
 import sqlite3
 from pathlib import Path
@@ -25,19 +25,19 @@ def init_db(db_path: str) -> sqlite3.Connection:
 
 
 def seed_db(db_path: str, config_path: str) -> None:
-    """Seed the database from a TOML config file.
+    """Seed the database from a TOML schema file.
 
     Args:
         db_path: Path to the SQLite database file.
-        config_path: Path to the TOML configuration file.
+        config_path: Path to the TOML schema file.
 
     Raises:
-        FileNotFoundError: If the config file doesn't exist.
-        ValueError: If the configuration is invalid.
+        FileNotFoundError: If the schema file doesn't exist.
+        ValueError: If the schema definition is invalid.
     """
     config_path_obj = Path(config_path)
     if not config_path_obj.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
+        raise FileNotFoundError(f"Schema file not found: {config_path}")
 
     with open(config_path, "rb") as f:
         config = tomllib.load(f)

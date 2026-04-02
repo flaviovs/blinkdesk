@@ -92,7 +92,7 @@ def main() -> None:
 
     # init
     p_init = subparsers.add_parser("init", help="Initialize a new database")
-    p_init.add_argument("config_path", help="Path to TOML config file")
+    p_init.add_argument("config_path", help="Path to TOML schema file")
     p_init.set_defaults(func=cmd_init)
 
     # config

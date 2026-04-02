@@ -1,4 +1,4 @@
-# Blink Desk Configuration Example
+# Blink Desk Schema Example
 # 
 # This is a simple Kanban-style workflow: TODO -> IN_PROGRESS -> DONE
 # Copy this file and customize it for your needs.
@@ -87,7 +87,7 @@ to_state = "done"
 # =============================================================================
 # OPTIONS
 # =============================================================================
-# Optional configuration for system behavior.
+# Optional runtime options for system behavior.
 
 [options]
 # Prefix shown before ticket IDs when displaying (e.g., "#42" or "TICKET-42")

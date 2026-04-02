@@ -38,7 +38,7 @@ def cmd_db_backup(args: argparse.Namespace) -> None:
 
 
 def cmd_init(args: argparse.Namespace) -> None:
-    """Initialize a new database from TOML config."""
+    """Initialize a new database from a TOML schema file."""
     db_path = _get_database_path(args)
     config_path = args.config_path
 

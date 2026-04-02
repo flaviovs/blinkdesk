@@ -69,7 +69,7 @@ Core Concepts
 
 **Entities** are the people, teams, or agents who can own tickets. Think of them as your users or groups. Each entity has a slug (like "alice" or "support-team") and a display name.
 
-**States** are the stages tickets can be in - like TODO, IN_PROGRESS, and DONE. You define these in your config file, so the workflow matches how your team actually works.
+**States** are the stages tickets can be in - like TODO, IN_PROGRESS, and DONE. You define these in your schema file, so the workflow matches how your team actually works.
 
 **Comments** let you add discussion to a ticket. Useful for context, updates, or just keeping a record of decisions.
 
@@ -194,10 +194,10 @@ Blink Desk's MCP server lets you connect AI assistant with the ticketing directl
 Setup
 -----
 
-Create a minimal config to define your states and entities:
+Create a minimal schema file to define your states and entities:
 
 ```bash
-cat > config.toml << 'EOF'
+cat > schema.toml << 'EOF'
 [[entities]]
 slug = "ai"
 name = "AI Assistant"
@@ -228,7 +228,7 @@ from_state = "in_progress"
 to_state = "closed"
 EOF
 
-bd -d tickets.db init config.toml
+bd -d tickets.db init schema.toml
 ```
 
 Then start the server:
@@ -302,7 +302,7 @@ Basics
 ------
 
 ```bash
-bd -d tickets.db init config.toml    # Initialize with config
+bd -d tickets.db init schema.toml    # Initialize with schema
 bd -d tickets.db ticket create --title "Bug fix"
 bd -d tickets.db ticket list         # List tickets
 bd -d tickets.db ticket get 42       # View ticket details
@@ -312,20 +312,20 @@ Run `bd --help` or `bd <command> --help` for all available options.
 
 ---
 
-Configuration
-=============
+Schema Definition
+=================
 
 Blink Desk uses TOML files to set up your database with the states, entities, and workflow rules you want.
 
 You define your states and entities once at setup time. This keeps the database schema simple and lets you model whatever workflow you need - simple bug tracking, full Kanban, support tickets, personal tasks.
 
-See [example.config.toml](./example.config.toml) for a complete working example with full documentation of each section.
+See [example.schema.toml](./example.schema.toml) for a complete working example with full documentation of each section.
 
-Using a Config
---------------
+Using a Schema File
+-------------------
 
 ```bash
-bd -d tickets.db init config.toml
+bd -d tickets.db init schema.toml
 ```
 
 This creates the database and seeds it with your entities, states, and transitions.
