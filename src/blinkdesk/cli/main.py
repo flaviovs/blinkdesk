@@ -8,7 +8,13 @@ from .config import (
     cmd_config_list,
     cmd_config_set,
 )
-from .db import cmd_db_backup, cmd_db_vacuum, cmd_init
+from .db import (
+    cmd_db_backup,
+    cmd_db_get_vacuum_mode,
+    cmd_db_set_vacuum_mode,
+    cmd_db_vacuum,
+    cmd_init,
+)
 from .entity import cmd_entity_list
 from .mcp import add_mcp_subparser
 from .state import cmd_state_list
@@ -89,6 +95,27 @@ def main() -> None:
     backup = p_db_sub.add_parser("backup", help="Backup database")
     backup.add_argument("output_path", help="Output file path")
     backup.set_defaults(func=cmd_db_backup)
+
+    db_get = p_db_sub.add_parser("get", help="Get database option")
+    db_get_sub = db_get.add_subparsers(dest="db_get_key", required=True)
+    db_get_vacuum_mode = db_get_sub.add_parser(
+        "vacuum_mode",
+        help="Get auto vacuum mode",
+    )
+    db_get_vacuum_mode.set_defaults(func=cmd_db_get_vacuum_mode)
+
+    db_set = p_db_sub.add_parser("set", help="Set database option")
+    db_set_sub = db_set.add_subparsers(dest="db_set_key", required=True)
+    db_set_vacuum_mode = db_set_sub.add_parser(
+        "vacuum_mode",
+        help="Set auto vacuum mode",
+    )
+    db_set_vacuum_mode.add_argument(
+        "mode",
+        choices=["none", "full", "incremental"],
+        help="Auto vacuum mode",
+    )
+    db_set_vacuum_mode.set_defaults(func=cmd_db_set_vacuum_mode)
 
     # init
     p_init = subparsers.add_parser("init", help="Initialize a new database")

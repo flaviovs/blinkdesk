@@ -310,6 +310,31 @@ bd -d tickets.db ticket get 42       # View ticket details
 
 Run `bd --help` or `bd <command> --help` for all available options.
 
+Database Maintenance
+--------------------
+
+Blink Desk supports SQLite auto-vacuum configuration through the CLI:
+
+```bash
+# Read current auto-vacuum mode
+bd -d tickets.db db get vacuum_mode
+
+# Set mode (none, full, incremental)
+bd -d tickets.db db set vacuum_mode incremental
+
+# Read current journal mode
+bd -d tickets.db db get journal_mode
+
+# Set journal mode (delete, truncate, persist, memory, wal, off)
+bd -d tickets.db db set journal_mode wal
+```
+
+Notes:
+
+- New databases created with `bd init` default to `auto_vacuum = incremental`.
+- This default is applied only when creating a fresh database file; existing databases are not changed.
+- On `TicketingSystem.close()`, Blink Desk runs `PRAGMA main.incremental_vacuum` with 1% probability.
+
 ---
 
 Schema Definition

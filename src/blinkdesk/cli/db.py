@@ -10,6 +10,17 @@ from ._helpers import _get_database_path
 from blinkdesk.init import seed_db
 
 
+_AUTO_VACUUM_MODE_TO_VALUE = {
+    "none": 0,
+    "full": 1,
+    "incremental": 2,
+}
+
+_AUTO_VACUUM_VALUE_TO_MODE = {
+    value: mode for mode, value in _AUTO_VACUUM_MODE_TO_VALUE.items()
+}
+
+
 def cmd_db_vacuum(args: argparse.Namespace) -> None:
     """Run VACUUM on the database."""
     db_path = _get_database_path(args)
@@ -19,6 +30,36 @@ def cmd_db_vacuum(args: argparse.Namespace) -> None:
         conn.execute("VACUUM")
         conn.commit()
         print("Database vacuumed successfully.")
+    finally:
+        conn.close()
+
+
+def cmd_db_get_vacuum_mode(args: argparse.Namespace) -> None:
+    """Get the current auto vacuum mode."""
+    db_path = _get_database_path(args)
+
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.execute("PRAGMA auto_vacuum")
+        mode_value = cursor.fetchone()[0]
+        mode = _AUTO_VACUUM_VALUE_TO_MODE.get(mode_value, "unknown")
+        print(mode)
+    finally:
+        conn.close()
+
+
+def cmd_db_set_vacuum_mode(args: argparse.Namespace) -> None:
+    """Set the auto vacuum mode."""
+    db_path = _get_database_path(args)
+    mode = args.mode.lower()
+    mode_value = _AUTO_VACUUM_MODE_TO_VALUE[mode]
+
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute(f"PRAGMA auto_vacuum = {mode_value}")
+        conn.execute("VACUUM")
+        conn.commit()
+        print(f"Database auto_vacuum mode set to: {mode}")
     finally:
         conn.close()
 

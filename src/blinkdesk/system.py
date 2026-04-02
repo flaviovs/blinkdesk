@@ -1,6 +1,7 @@
 """Main entry point for the ticketing system."""
 
 import logging
+import random
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -48,7 +49,11 @@ class TicketingSystem:
 
     def close(self) -> None:
         """Close the database connection."""
-        self._conn.close()
+        try:
+            if random.random() < 0.01:
+                self._conn.execute("PRAGMA main.incremental_vacuum")
+        finally:
+            self._conn.close()
 
     def create_entity(self, slug: str, name: str | None = None) -> Entity:
         """Create a new entity.
