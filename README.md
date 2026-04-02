@@ -305,6 +305,8 @@ Basics
 bd -d tickets.db init schema.toml    # Initialize with schema
 bd -d tickets.db ticket create --title "Bug fix"
 bd -d tickets.db ticket list         # List tickets
+bd -d tickets.db ticket list -s open -a alice   # Filter by state/assignee
+bd -d tickets.db ticket list --slug             # Show slugs instead of names
 bd -d tickets.db ticket get 42       # View ticket details
 ```
 

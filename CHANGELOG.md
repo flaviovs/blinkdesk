@@ -10,6 +10,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 - CLI commands `entity list` and `state list`
 - Filter options (`-s/--state`, `-a/--assignee`) for `ticket list` command
+- `--slug` option to `ticket list` and `ticket get` to show slug instead of name in table output (JSON always includes both)
 - MCP server support with FastMCP
 - New CLI commands: `bd mcp stdio`, `bd mcp streamable-http`, `bd mcp sse`
 - Improved MCP tools with better descriptions and LLM-optimized naming

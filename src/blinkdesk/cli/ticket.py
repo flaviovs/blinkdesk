@@ -66,7 +66,9 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
                 "id": f"{prefix}{t.id}" if prefix else t.id,
                 "title": t.title,
                 "state": t.state.name,
+                "state_slug": t.state.slug,
                 "assignee": t.assignee.name if t.assignee else None,
+                "assignee_slug": t.assignee.slug if t.assignee else None,
                 "created_at": t.created_at.isoformat(),
                 "updated_at": t.updated_at.isoformat(),
                 "description": t.description,
@@ -76,6 +78,19 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
         if args.output_format == "json":
             _format_json(data)
         else:
+            if args.slug:
+                data = [
+                    {
+                        "id": d["id"],
+                        "title": d["title"],
+                        "state": d["state_slug"],
+                        "assignee": d["assignee_slug"],
+                        "created_at": d["created_at"],
+                        "updated_at": d["updated_at"],
+                        "description": d["description"],
+                    }
+                    for d in data
+                ]
             _format_table(data, prefix=prefix)
     finally:
         system.close()
@@ -96,7 +111,9 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
             "id": f"{prefix}{ticket.id}" if prefix else ticket.id,
             "title": ticket.title,
             "state": ticket.state.name,
+            "state_slug": ticket.state.slug,
             "assignee": ticket.assignee.name if ticket.assignee else None,
+            "assignee_slug": ticket.assignee.slug if ticket.assignee else None,
             "created_at": ticket.created_at.isoformat(),
             "updated_at": ticket.updated_at.isoformat(),
             "description": ticket.description,
@@ -104,6 +121,16 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
         if args.output_format == "json":
             _format_json(data)
         else:
+            if args.slug:
+                data = {
+                    "id": data["id"],
+                    "title": data["title"],
+                    "state": data["state_slug"],
+                    "assignee": data["assignee_slug"],
+                    "created_at": data["created_at"],
+                    "updated_at": data["updated_at"],
+                    "description": data["description"],
+                }
             _format_table([], data, prefix=prefix)
     finally:
         system.close()

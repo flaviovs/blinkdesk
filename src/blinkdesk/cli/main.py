@@ -68,6 +68,9 @@ def main() -> None:
     )
     lst.add_argument("-s", "--state", help="Filter by state slug (e.g., open, closed)")
     lst.add_argument("-a", "--assignee", help="Filter by assignee slug")
+    lst.add_argument(
+        "--slug", action="store_true", help="Show slug instead of name in table output"
+    )
     lst.set_defaults(func=cmd_ticket_list)
 
     # ticket get
@@ -75,6 +78,9 @@ def main() -> None:
     get.add_argument("ticket_id", type=int, help="Ticket ID")
     get.add_argument(
         "-f", "--output-format", choices=["json", "table"], default="table"
+    )
+    get.add_argument(
+        "--slug", action="store_true", help="Show slug instead of name in table output"
     )
     get.set_defaults(func=cmd_ticket_get)
 

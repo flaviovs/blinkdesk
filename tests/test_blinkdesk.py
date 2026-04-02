@@ -1,5 +1,6 @@
 import argparse
 import io
+import json
 import os
 import sqlite3
 import tempfile
@@ -9,6 +10,7 @@ from typing import Any
 
 from blinkdesk import TicketingSystem, init_db
 from blinkdesk.cli.db import cmd_db_get_journal_mode, cmd_db_set_journal_mode
+from blinkdesk.cli.ticket import cmd_ticket_list, cmd_ticket_get
 from blinkdesk.init import seed_db_from_dict
 
 
@@ -345,6 +347,134 @@ class TestBlinkDesk(unittest.TestCase):
         }
         system = self._init_system(data)
         self.assertEqual(system.format_ticket_id(123), "123")
+
+    def test_ticket_list_slug_option_table(self) -> None:
+        data = {
+            "entities": [{"name": "Alice", "slug": "alice"}],
+            "states": [{"name": "Open", "slug": "open"}],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.assign_ticket(ticket, entity)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            output_format="table",
+            state=None,
+            assignee=None,
+            slug=False,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_list(args)
+        output = out.getvalue()
+        self.assertIn("Open", output)
+        self.assertIn("Alice", output)
+
+        args.slug = True
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_list(args)
+        output = out.getvalue()
+        self.assertIn("open", output)
+        self.assertIn("alice", output)
+        self.assertNotIn("Open", output)
+        self.assertNotIn("Alice", output)
+
+    def test_ticket_list_slug_option_json(self) -> None:
+        data = {
+            "entities": [{"name": "Alice", "slug": "alice"}],
+            "states": [{"name": "Open", "slug": "open"}],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.assign_ticket(ticket, entity)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            output_format="json",
+            state=None,
+            assignee=None,
+            slug=False,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_list(args)
+        output = json.loads(out.getvalue())
+
+        self.assertEqual(output[0]["state"], "Open")
+        self.assertEqual(output[0]["state_slug"], "open")
+        self.assertEqual(output[0]["assignee"], "Alice")
+        self.assertEqual(output[0]["assignee_slug"], "alice")
+
+    def test_ticket_get_slug_option_table(self) -> None:
+        data = {
+            "entities": [{"name": "Alice", "slug": "alice"}],
+            "states": [{"name": "Open", "slug": "open"}],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.assign_ticket(ticket, entity)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            output_format="table",
+            slug=False,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_get(args)
+        output = out.getvalue()
+        self.assertIn("Open", output)
+        self.assertIn("Alice", output)
+
+        args.slug = True
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_get(args)
+        output = out.getvalue()
+        self.assertIn("open", output)
+        self.assertIn("alice", output)
+        self.assertNotIn("Open", output)
+        self.assertNotIn("Alice", output)
+
+    def test_ticket_get_slug_option_json(self) -> None:
+        data = {
+            "entities": [{"name": "Alice", "slug": "alice"}],
+            "states": [{"name": "Open", "slug": "open"}],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.assign_ticket(ticket, entity)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            output_format="json",
+            slug=False,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_get(args)
+        output = json.loads(out.getvalue())
+
+        self.assertEqual(output["state"], "Open")
+        self.assertEqual(output["state_slug"], "open")
+        self.assertEqual(output["assignee"], "Alice")
+        self.assertEqual(output["assignee_slug"], "alice")
 
 
 if __name__ == "__main__":
