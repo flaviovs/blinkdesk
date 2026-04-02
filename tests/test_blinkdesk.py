@@ -3,12 +3,16 @@ import io
 import json
 import os
 import sqlite3
+import sys
 import tempfile
+import types
 import unittest
 from contextlib import redirect_stdout
+from unittest.mock import patch
 from typing import Any
 
 from blinkdesk import TicketingSystem, init_db
+from blinkdesk._mcp import create_mcp_server
 from blinkdesk.cli.db import cmd_db_get_journal_mode, cmd_db_set_journal_mode
 from blinkdesk.cli.ticket import cmd_ticket_list, cmd_ticket_get
 from blinkdesk.init import seed_db_from_dict
@@ -475,6 +479,93 @@ class TestBlinkDesk(unittest.TestCase):
         self.assertEqual(output["state_slug"], "open")
         self.assertEqual(output["assignee"], "Alice")
         self.assertEqual(output["assignee_slug"], "alice")
+
+    def test_ticket_list_table_applies_prefix_once(self) -> None:
+        data = {
+            "states": [{"name": "Open", "slug": "open"}],
+            "options": {"display_prefix": "BD-"},
+        }
+        system = self._init_system(data)
+        system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            output_format="table",
+            state=None,
+            assignee=None,
+            slug=False,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_list(args)
+        output = out.getvalue()
+
+        self.assertIn("BD-1", output)
+        self.assertNotIn("BD-BD-1", output)
+
+    def test_ticket_get_table_applies_prefix_once(self) -> None:
+        data = {
+            "states": [{"name": "Open", "slug": "open"}],
+            "options": {"display_prefix": "BD-"},
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            output_format="table",
+            slug=False,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_get(args)
+        output = out.getvalue()
+
+        self.assertIn("ID:      BD-1", output)
+        self.assertNotIn("BD-BD-1", output)
+
+    def test_mcp_not_found_uses_display_prefix(self) -> None:
+        data = {
+            "states": [{"name": "Open", "slug": "open"}],
+            "options": {"display_prefix": "BD-"},
+        }
+        system = self._init_system(data)
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            update_ticket = mcp.tools["update_ticket"]
+            with self.assertRaises(ValueError) as ctx:
+                update_ticket(999, title="Nope")
+
+        self.assertEqual(str(ctx.exception), "Ticket BD-999 not found")
 
 
 if __name__ == "__main__":

@@ -63,7 +63,7 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
         prefix = system.display_prefix
         data = [
             {
-                "id": f"{prefix}{t.id}" if prefix else t.id,
+                "id": t.id,
                 "title": t.title,
                 "state": t.state.name,
                 "state_slug": t.state.slug,
@@ -76,6 +76,8 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
             for t in tickets
         ]
         if args.output_format == "json":
+            if prefix:
+                data = [{**d, "id": f"{prefix}{d['id']}"} for d in data]
             _format_json(data)
         else:
             if args.slug:
@@ -104,11 +106,11 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
         ticket = system.get_ticket(args.ticket_id)
         prefix = system.display_prefix
         if ticket is None:
-            ticket_id = f"{prefix}{args.ticket_id}" if prefix else str(args.ticket_id)
+            ticket_id = system.format_ticket_id(args.ticket_id)
             print(f"Ticket not found: {ticket_id}", file=sys.stderr)
             sys.exit(1)
         data = {
-            "id": f"{prefix}{ticket.id}" if prefix else ticket.id,
+            "id": ticket.id,
             "title": ticket.title,
             "state": ticket.state.name,
             "state_slug": ticket.state.slug,
@@ -119,6 +121,8 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
             "description": ticket.description,
         }
         if args.output_format == "json":
+            if prefix:
+                data["id"] = f"{prefix}{data['id']}"
             _format_json(data)
         else:
             if args.slug:

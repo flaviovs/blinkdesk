@@ -115,7 +115,8 @@ def create_mcp_server(database_path: str) -> "FastMCP":
         try:
             ticket = system.get_ticket(ticket_id)
             if ticket is None:
-                raise ValueError(f"Ticket #{ticket_id} not found")
+                formatted_ticket_id = system.format_ticket_id(ticket_id)
+                raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
             ticket = system.update_ticket(ticket, title or ticket.title, description)
             return {
@@ -137,7 +138,8 @@ def create_mcp_server(database_path: str) -> "FastMCP":
         try:
             ticket = system.get_ticket(ticket_id)
             if ticket is None:
-                raise ValueError(f"Ticket #{ticket_id} not found")
+                formatted_ticket_id = system.format_ticket_id(ticket_id)
+                raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
             state_machine = system.get_state_machine()
             target_state = state_machine.get_state_by_slug(new_state)
@@ -162,7 +164,8 @@ def create_mcp_server(database_path: str) -> "FastMCP":
         try:
             ticket = system.get_ticket(ticket_id)
             if ticket is None:
-                raise ValueError(f"Ticket #{ticket_id} not found")
+                formatted_ticket_id = system.format_ticket_id(ticket_id)
+                raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
             entity = system.get_entity_by_slug(assignee_slug)
             if entity is None:
@@ -186,7 +189,8 @@ def create_mcp_server(database_path: str) -> "FastMCP":
         try:
             ticket = system.get_ticket(ticket_id)
             if ticket is None:
-                raise ValueError(f"Ticket #{ticket_id} not found")
+                formatted_ticket_id = system.format_ticket_id(ticket_id)
+                raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
             ticket = system.unassign_ticket(ticket)
             return {
@@ -237,7 +241,8 @@ def create_mcp_server(database_path: str) -> "FastMCP":
         try:
             ticket = system.get_ticket(ticket_id)
             if ticket is None:
-                raise ValueError(f"Ticket #{ticket_id} not found")
+                formatted_ticket_id = system.format_ticket_id(ticket_id)
+                raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
             entity = system.get_entity_by_slug(author_slug)
             if entity is None:
@@ -261,7 +266,8 @@ def create_mcp_server(database_path: str) -> "FastMCP":
         try:
             ticket = system.get_ticket(ticket_id)
             if ticket is None:
-                raise ValueError(f"Ticket #{ticket_id} not found")
+                formatted_ticket_id = system.format_ticket_id(ticket_id)
+                raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
             comments = system.get_ticket_comments(ticket)
             return [
@@ -285,7 +291,8 @@ def create_mcp_server(database_path: str) -> "FastMCP":
         try:
             ticket = system.get_ticket(ticket_id)
             if ticket is None:
-                raise ValueError(f"Ticket #{ticket_id} not found")
+                formatted_ticket_id = system.format_ticket_id(ticket_id)
+                raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
             logs = system.get_ticket_logs(ticket)
             return [

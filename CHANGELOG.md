@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Ticket ID display prefix is now applied exactly once in CLI table output and is now respected by MCP "ticket not found" errors
+
 ## [0.2.1] - 2026-04-01
 
 ### Fixed
