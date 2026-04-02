@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
+## [0.2.1] - 2026-04-01
+
+### Fixed
+
+- `seed_db` now correctly handles TOML list format (`[[entities]]`, `[[states]]`, `[[transitions]]`) in schema files
+
+### Changed
+
+- Move OPTIONS section to beginning of example schema file for better readability
+
 ## [0.2.0] - 2026-04-01
 
 ### Fixed
