@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2026-04-01
 
 ### Added
 

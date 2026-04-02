@@ -1,6 +1,6 @@
 """Lightweight ticketing system using SQLite with no external dependencies."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from blinkdesk.comment import Comment
 from blinkdesk.entity import Entity
