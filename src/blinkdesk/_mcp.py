@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from blinkdesk.system import TicketingSystem
 
@@ -28,15 +28,14 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
     def find_tickets(
         state: str | None = None,
         assignee: str | None = None,
-        order: str = "id-asc",
+        order: Literal["id-asc", "id-desc", "priority-asc", "priority-desc"] = "id-asc",
         limit: int = 50,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
         """Use when searching for issue tickets matching specific criteria in the
         ticket tracking system. Returns paginated list of ticket summaries
         (id, title, state, priority, assignee). Filter by state slug or assignee slug.
-        Sort by 'id-asc', 'id-desc', 'priority-asc', or 'priority-desc' (default:
-        id-asc, which sorts by creation time)."""
+        Sort by id or priority, ascending or descending."""
         system = TicketingSystem(database_path)
         try:
             tickets = system.list_tickets()

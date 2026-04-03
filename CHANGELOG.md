@@ -26,6 +26,11 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Changed
 
+- MCP `find_tickets` tool now exposes `order` parameter as enum (discoverable by AI agents)
+
+
+### Changed
+
 - **BC BREAK** `update_ticket()` API no longer accepts description parameter (only title can be updated)
 - **BC BREAK** Simplified schema: entities and states now use slug-only identifiers (no separate "name" field)
 - **BC BREAK** TOML schema format simplified: `entities = ["john", "agent-1"]` instead of table-of-tables
