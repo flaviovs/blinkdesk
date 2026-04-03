@@ -26,6 +26,11 @@ def cmd_config_set(args: argparse.Namespace) -> None:
     db_path = _get_database_path(args)
     system = TicketingSystem(db_path)
     try:
+        if args.key == "default_priority":
+            priority = system.get_priority_machine().get_priority_by_slug(args.value)
+            if priority is None:
+                print(f"Invalid priority: {args.value}", file=sys.stderr)
+                raise SystemExit(1)
         system.set_config(args.key, args.value)
         print(f"Config set: {args.key} = {args.value}")
     finally:

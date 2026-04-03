@@ -22,6 +22,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 ### Fixed
 
 - `default_priority` now properly stored in config table (moved to `[options]` section)
+- `bd config set` now validates that `default_priority` value is a valid priority slug
 
 ### Changed
 
