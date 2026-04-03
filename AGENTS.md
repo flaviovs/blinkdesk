@@ -64,16 +64,6 @@ bd -d mydb.db ticket list
 bd -d mydb.db mcp stdio
 ```
 
-For testing, create databases in `$VIRTUAL_ENV/tmp` to avoid cluttering the working directory:
-
-```bash
-# Create test database for testing
-bd -d $VIRTUAL_ENV/tmp/test.db init schema.toml
-
-# Run tests with the test database
-bd -d $VIRTUAL_ENV/tmp/test.db ticket create --title "Test ticket"
-```
-
 ## Code Requirements
 
 - Python 3.11+
@@ -85,13 +75,23 @@ bd -d $VIRTUAL_ENV/tmp/test.db ticket create --title "Test ticket"
 - Add Google Standard docstrings to public APIs
 - All changes need unit tests
 - Document user-facing changes in CHANGELOG.md
+- When manually testing the `bd` CLI, use `$VIRTUAL_ENV/tmp` for temporary databases
 
 ## Version Handling
 - Version is in `src/blinkdesk/__init__.py`
+- Only bump version when explicitly requested
 - Determine bump level according to changes since last version
 - Use Semantic Versioning: patch for bug fixes, minor for new features
 - Never bump major unless explicitly requested
 - After bumping version, you must ensure that `CHANGELOG.md` is updated
+
+## Changelog Guidelines
+
+- Changes must always be added under an `## Unreleased` section
+- One changeset = one line
+- Focus on user-facing behavior, not implementation details
+- Do not document what can be discovered by `git diff`
+- Keep entries brief and meaningful
 
 ## Git Guidelines
 
