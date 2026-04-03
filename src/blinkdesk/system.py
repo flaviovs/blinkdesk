@@ -20,9 +20,9 @@ _TICKET_SELECT_QUERY = """
 SELECT
     t.ticket_id, t.title, t.description, t.state_id, t.priority_id,
     t.assignee_entity_id, t.created_at, t.updated_at,
-    e.entity_id, e.slug AS entity_slug, e.name AS entity_name,
+    e.entity_id, e.slug AS entity_slug,
     ts.state_id AS state_id_new,
-    ts.slug AS state_slug, ts.name AS state_name,
+    ts.slug AS state_slug,
     tp.priority_id AS priority_id_new,
     tp.slug AS priority_slug
 FROM tickets t
@@ -62,21 +62,18 @@ class TicketingSystem:
         finally:
             self._conn.close()
 
-    def create_entity(self, slug: str, name: str | None = None) -> Entity:
+    def create_entity(self, slug: str) -> Entity:
         """Create a new entity.
 
         Args:
             slug: URL-friendly slug for the entity.
-            name: Human-readable name (defaults to slug).
 
         Returns:
             The created Entity.
         """
-        if name is None:
-            name = slug
         cursor = self._conn.execute(
-            "INSERT INTO entities (slug, name) VALUES (?, ?)",
-            (slug, name),
+            "INSERT INTO entities (slug) VALUES (?)",
+            (slug,),
         )
         self._conn.commit()
         last_id = cursor.lastrowid
@@ -86,7 +83,6 @@ class TicketingSystem:
         return Entity(
             entity_id=last_id,
             slug=slug,
-            name=name,
         )
 
     def get_entity(self, entity_id: int) -> Entity | None:
@@ -99,7 +95,7 @@ class TicketingSystem:
             The Entity if found, None otherwise.
         """
         cursor = self._conn.execute(
-            "SELECT entity_id, slug, name FROM entities WHERE entity_id = ?",
+            "SELECT entity_id, slug FROM entities WHERE entity_id = ?",
             (entity_id,),
         )
         row = cursor.fetchone()
@@ -117,7 +113,7 @@ class TicketingSystem:
             The Entity if found, None otherwise.
         """
         cursor = self._conn.execute(
-            "SELECT entity_id, slug, name FROM entities WHERE slug = ?",
+            "SELECT entity_id, slug FROM entities WHERE slug = ?",
             (slug,),
         )
         row = cursor.fetchone()
@@ -132,7 +128,7 @@ class TicketingSystem:
             List of all entities ordered by entity_id.
         """
         cursor = self._conn.execute(
-            "SELECT entity_id, slug, name FROM entities ORDER BY entity_id"
+            "SELECT entity_id, slug FROM entities ORDER BY entity_id"
         )
         return [Entity.from_row(row) for row in cursor.fetchall()]
 
@@ -386,9 +382,9 @@ class TicketingSystem:
         )
         self._conn.commit()
         self._log_ticket(
-            ticket.id, TicketLogAction.ASSIGNED, entity, f"assigned to {entity.name}"
+            ticket.id, TicketLogAction.ASSIGNED, entity, f"assigned to {entity.slug}"
         )
-        logger.info("Assigned ticket #%d to %s", ticket.id, entity.name)
+        logger.info("Assigned ticket #%d to %s", ticket.id, entity.slug)
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
     def unassign_ticket(self, ticket: Ticket) -> Ticket:
@@ -431,11 +427,11 @@ class TicketingSystem:
             logger.warning(
                 "Invalid transition for ticket #%d: %s -> %s",
                 ticket.id,
-                ticket.state.name,
-                new_state.name,
+                ticket.state.slug,
+                new_state.slug,
             )
             raise ValueError(
-                f"Invalid transition from {ticket.state.name} to {new_state.name}"
+                f"Invalid transition from {ticket.state.slug} to {new_state.slug}"
             )
         now = datetime.now(timezone.utc).isoformat()
         self._conn.execute(
@@ -449,13 +445,13 @@ class TicketingSystem:
         self._log_ticket(
             ticket.id,
             TicketLogAction.STATE_CHANGED,
-            details=f"{ticket.state.name} -> {new_state.name}",
+            details=f"{ticket.state.slug} -> {new_state.slug}",
         )
         logger.info(
             "Transitioned ticket #%d: %s -> %s",
             ticket.id,
-            ticket.state.name,
-            new_state.name,
+            ticket.state.slug,
+            new_state.slug,
         )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
@@ -474,7 +470,7 @@ class TicketingSystem:
                 tl.ticket_id, tl.ticket_log_id, tl.entity_id, tl.action,
                 tl.details, tl.created_at,
                 e.entity_id AS entity_id_new,
-                e.slug AS entity_slug, e.name AS entity_name
+                e.slug AS entity_slug
             FROM ticket_logs tl
             LEFT JOIN entities e ON tl.entity_id = e.entity_id
             WHERE tl.ticket_id = ?
@@ -489,7 +485,6 @@ class TicketingSystem:
                 entity = Entity(
                     entity_id=row["entity_id_new"],
                     slug=row["entity_slug"],
-                    name=row["entity_name"],
                 )
             logs.append(TicketLog.from_row(row, entity))
         return logs
@@ -556,9 +551,9 @@ class TicketingSystem:
                 c.ticket_id, c.comment_id, c.entity_id, c.comment,
                 c.new_state_id, c.created_at,
                 e.entity_id AS entity_id_new,
-                e.slug AS entity_slug, e.name AS entity_name,
+                e.slug AS entity_slug,
                 ts.state_id AS new_state_id_new,
-                ts.slug AS new_state_slug, ts.name AS new_state_name
+                ts.slug AS new_state_slug
             FROM comments c
             LEFT JOIN entities e ON c.entity_id = e.entity_id
             LEFT JOIN ticket_states ts ON c.new_state_id = ts.state_id
@@ -574,14 +569,12 @@ class TicketingSystem:
                 entity = Entity(
                     entity_id=row["entity_id_new"],
                     slug=row["entity_slug"],
-                    name=row["entity_name"],
                 )
             new_state: TicketState | None = None
             if row["new_state_id_new"] is not None:
                 new_state = TicketState(
                     state_id=row["new_state_id_new"],
                     slug=row["new_state_slug"],
-                    name=row["new_state_name"],
                 )
             comments.append(Comment.from_row(row, entity, new_state))
         return comments
@@ -614,7 +607,6 @@ class TicketingSystem:
         state = TicketState(
             state_id=row["state_id_new"],
             slug=row["state_slug"],
-            name=row["state_name"],
         )
         priority = TicketPriority(
             priority_id=row["priority_id_new"],
@@ -625,7 +617,6 @@ class TicketingSystem:
             assignee = Entity(
                 entity_id=row["entity_id"],
                 slug=row["entity_slug"],
-                name=row["entity_name"],
             )
         return Ticket(
             id=row["ticket_id"],

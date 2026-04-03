@@ -16,6 +16,6 @@ def cmd_entity_list(args: argparse.Namespace) -> None:
             print("No entities found.")
             return
         for entity in entities:
-            print(f"{entity.slug} ({entity.name})")
+            print(entity.slug)
     finally:
         system.close()

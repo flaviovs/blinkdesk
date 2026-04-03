@@ -385,18 +385,14 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
     def find_entities(search: str | None = None) -> list[dict[str, Any]]:
         """Use when you need to list users or teams in the ticket tracking system.
         Entities are users or teams that can be assigned issue tickets or author
-        comments. Returns id, slug, and name. Optionally filter by search term."""
+        comments. Returns id and slug. Optionally filter by search term."""
         system = TicketingSystem(database_path)
         try:
             entities = system.list_entities()
             result = []
             for e in entities:
-                if (
-                    search is None
-                    or search.lower() in e.slug.lower()
-                    or search.lower() in e.name.lower()
-                ):
-                    result.append({"id": e.entity_id, "slug": e.slug, "name": e.name})
+                if search is None or search.lower() in e.slug.lower():
+                    result.append({"id": e.entity_id, "slug": e.slug})
             return result
         finally:
             system.close()
@@ -406,8 +402,8 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         id: int | None = None, slug: str | None = None
     ) -> dict[str, Any] | None:
         """Use when you need details of a specific user or team in the ticket
-        tracking system. Provide either numeric ID or slug string. Returns id,
-        slug, name. Returns null if not found. Requires exactly one of id or slug."""
+        tracking system. Provide either numeric ID or slug string. Returns id and
+        slug. Returns null if not found. Requires exactly one of id or slug."""
         if id is None and slug is None:
             raise ValueError("Either id or slug must be provided")
         if id is not None and slug is not None:
@@ -422,7 +418,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
 
             if entity is None:
                 return None
-            return {"id": entity.entity_id, "slug": entity.slug, "name": entity.name}
+            return {"id": entity.entity_id, "slug": entity.slug}
         finally:
             system.close()
 

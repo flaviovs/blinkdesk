@@ -13,27 +13,36 @@ from blinkdesk._db import (
 )
 
 
-def _convert_list_to_dict(items: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
-    """Convert a list of items to a dict keyed by slug."""
-    result = {}
+def _validate_no_name_field(config: dict[str, Any], section: str) -> None:
+    """Validate that config section doesn't use deprecated 'name' field.
+
+    Args:
+        config: Parsed TOML config.
+        section: Section name to validate.
+
+    Raises:
+        ValueError: If deprecated 'name' field is used.
+    """
+    items = config.get(section, [])
     for item in items:
-        slug = item.get("slug", item.get("name", "").lower().replace(" ", "-"))
-        result[slug] = {"name": item.get("name", slug)}
-    return result
+        if isinstance(item, dict) and "name" in item:
+            raise ValueError(
+                f"Invalid schema: '{section}' uses deprecated 'name' field. "
+                f"Use slug-only format: {section} = ['slug1', 'slug2']"
+            )
 
 
-def _convert_transitions_list(
-    transitions: list[dict[str, str]],
-) -> dict[str, list[str]]:
-    """Convert a list of transitions to dict keyed by from_state."""
-    result: dict[str, list[str]] = {}
-    for trans in transitions:
-        from_slug = trans.get("from_state", "").lower().replace(" ", "-")
-        to_slug = trans.get("to_state", "").lower().replace(" ", "-")
-        if from_slug not in result:
-            result[from_slug] = []
-        result[from_slug].append(to_slug)
-    return result
+def _validate_config(config: dict[str, Any]) -> None:
+    """Validate TOML config doesn't use deprecated format.
+
+    Args:
+        config: Parsed TOML config.
+
+    Raises:
+        ValueError: If deprecated format is detected.
+    """
+    for section in ["entities", "states"]:
+        _validate_no_name_field(config, section)
 
 
 def init_db(db_path: str) -> sqlite3.Connection:
@@ -69,19 +78,21 @@ def seed_db(db_path: str, config_path: str) -> None:
     with open(config_path, "rb") as f:
         config = tomllib.load(f)
 
+    _validate_config(config)
+
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
-        _seed_entities(conn, _convert_list_to_dict(config.get("entities", [])))
-        _seed_states(conn, _convert_list_to_dict(config.get("states", [])))
+        entities = config.get("entities", [])
+        states = config.get("states", [])
+        _seed_entities(conn, entities)
+        _seed_states(conn, states)
         _seed_priorities(
             conn,
-            _convert_list_to_dict(config.get("priorities", [])),
+            config.get("priorities", []),
             config.get("default_priority", "normal"),
         )
-        _seed_transitions(
-            conn, _convert_transitions_list(config.get("transitions", []))
-        )
+        _seed_transitions(conn, config.get("transitions", []))
         _seed_options(conn, config.get("options", {}))
         set_schema_version(conn, CURRENT_SCHEMA_VERSION)
     finally:
@@ -98,105 +109,69 @@ def seed_db_from_dict(db_path: str, data: dict[str, Any]) -> None:
     Raises:
         ValueError: If the configuration is invalid.
     """
+    _validate_config(data)
+
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
-        entities = data.get("entities", [])
-        if entities:
-            entities_dict = {}
-            for ent in entities:
-                slug = ent.get("slug", ent.get("name", "").lower().replace(" ", "-"))
-                entities_dict[slug] = {"name": ent.get("name", slug)}
-            _seed_entities(conn, entities_dict)
-
-        states = data.get("states", [])
-        if states:
-            states_dict = {}
-            for state in states:
-                name = state.get("name", "")
-                slug = state.get("slug", name.lower().replace(" ", "-"))
-                states_dict[slug] = {"name": name}
-            _seed_states(conn, states_dict)
-
-        priorities = data.get("priorities", [])
-        default_priority = data.get("default_priority", "normal")
-        if priorities:
-            priorities_dict: dict[str, dict[str, Any]] = {}
-            for p in priorities:
-                slug = p.get("slug", "")
-                if not slug:
-                    name = p.get("name", "").lower().replace(" ", "-")
-                    slug = name
-                priorities_dict[slug] = {}
-            _seed_priorities(conn, priorities_dict, default_priority)
-        else:
-            _seed_priorities(conn, {}, default_priority)
-
-        transitions = data.get("transitions", [])
-        if transitions:
-            transitions_dict: dict[str, list[str]] = {}
-            for trans in transitions:
-                from_slug = trans.get("from_state", "").lower().replace(" ", "-")
-                to_slug = trans.get("to_state", "").lower().replace(" ", "-")
-                if from_slug not in transitions_dict:
-                    transitions_dict[from_slug] = []
-                transitions_dict[from_slug].append(to_slug)
-            _seed_transitions(conn, transitions_dict)
-
-        options = data.get("options", {})
-        if options:
-            _seed_options(conn, options)
+        _seed_entities(conn, data.get("entities", []))
+        _seed_states(conn, data.get("states", []))
+        _seed_priorities(
+            conn,
+            data.get("priorities", []),
+            data.get("default_priority", "normal"),
+        )
+        _seed_transitions(conn, data.get("transitions", []))
+        _seed_options(conn, data.get("options", {}))
         set_schema_version(conn, CURRENT_SCHEMA_VERSION)
     finally:
         conn.close()
 
 
-def _seed_entities(conn: sqlite3.Connection, entities: dict[str, Any]) -> None:
+def _seed_entities(conn: sqlite3.Connection, entities: list[str]) -> None:
     """Seed entities from config.
 
     Args:
         conn: Database connection.
-        entities: Dict of entity slug -> {name}.
+        entities: List of entity slugs.
     """
-    for slug, data in entities.items():
-        name = data.get("name", slug)
+    for slug in entities:
         conn.execute(
-            "INSERT INTO entities (slug, name) VALUES (?, ?)",
-            (slug, name),
+            "INSERT INTO entities (slug) VALUES (?)",
+            (slug,),
         )
     conn.commit()
 
 
-def _seed_states(conn: sqlite3.Connection, states: dict[str, Any]) -> None:
+def _seed_states(conn: sqlite3.Connection, states: list[str]) -> None:
     """Seed states from config.
 
     Args:
         conn: Database connection.
-        states: Dict of state slug -> {name}.
+        states: List of state slugs.
     """
-    for slug, data in states.items():
-        name = data.get("name", slug)
+    for slug in states:
         conn.execute(
-            "INSERT INTO ticket_states (slug, name) VALUES (?, ?)",
-            (slug, name),
+            "INSERT INTO ticket_states (slug) VALUES (?)",
+            (slug,),
         )
     conn.commit()
 
 
 def _seed_priorities(
-    conn: sqlite3.Connection, priorities: dict[str, Any], default_priority: str
+    conn: sqlite3.Connection, priorities: list[str], default_priority: str
 ) -> None:
     """Seed priorities from config.
 
     Args:
         conn: Database connection.
-        priorities: Dict of priority slug -> {}.
+        priorities: List of priority slugs.
         default_priority: Slug of the default priority.
     """
     if not priorities:
-        priorities = {"low": {}, "normal": {}, "high": {}}
+        priorities = ["low", "normal", "high"]
 
-    for slug in priorities.keys():
+    for slug in priorities:
         conn.execute(
             "INSERT OR IGNORE INTO ticket_priorities (slug) VALUES (?)",
             (slug,),
@@ -213,14 +188,19 @@ def _seed_priorities(
     conn.commit()
 
 
-def _seed_transitions(conn: sqlite3.Connection, transitions: dict[str, Any]) -> None:
+def _seed_transitions(
+    conn: sqlite3.Connection, transitions: list[dict[str, str]]
+) -> None:
     """Seed transitions from config.
 
     Args:
         conn: Database connection.
-        transitions: Dict of from_slug -> [to_slug, ...].
+        transitions: List of transition dicts with 'from' and 'to' keys.
     """
-    for from_slug, to_slugs in transitions.items():
+    for trans in transitions:
+        from_slug = trans.get("from", "").lower().replace(" ", "-")
+        to_slug = trans.get("to", "").lower().replace(" ", "-")
+
         from_cursor = conn.execute(
             "SELECT state_id FROM ticket_states WHERE slug = ?",
             (from_slug,),
@@ -230,21 +210,20 @@ def _seed_transitions(conn: sqlite3.Connection, transitions: dict[str, Any]) -> 
             raise ValueError(f"Transition references unknown state: {from_slug}")
         from_id = from_row["state_id"]
 
-        for to_slug in to_slugs:
-            to_cursor = conn.execute(
-                "SELECT state_id FROM ticket_states WHERE slug = ?",
-                (to_slug,),
-            )
-            to_row = to_cursor.fetchone()
-            if to_row is None:
-                raise ValueError(f"Transition references unknown state: {to_slug}")
-            to_id = to_row["state_id"]
+        to_cursor = conn.execute(
+            "SELECT state_id FROM ticket_states WHERE slug = ?",
+            (to_slug,),
+        )
+        to_row = to_cursor.fetchone()
+        if to_row is None:
+            raise ValueError(f"Transition references unknown state: {to_slug}")
+        to_id = to_row["state_id"]
 
-            conn.execute(
-                "INSERT OR IGNORE INTO state_transitions "
-                "(from_state_id, to_state_id) VALUES (?, ?)",
-                (from_id, to_id),
-            )
+        conn.execute(
+            "INSERT OR IGNORE INTO state_transitions "
+            "(from_state_id, to_state_id) VALUES (?, ?)",
+            (from_id, to_id),
+        )
     conn.commit()
 
 

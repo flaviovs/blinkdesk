@@ -36,8 +36,16 @@ def _migrate_v0_to_v1(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def _migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
+    """Migrate from schema v1 to v2: remove name columns from entities."""
+    conn.execute("ALTER TABLE entities DROP COLUMN name")
+    conn.execute("ALTER TABLE ticket_states DROP COLUMN name")
+    conn.commit()
+
+
 MIGRATIONS = [
     (0, _migrate_v0_to_v1),
+    (1, _migrate_v1_to_v2),
 ]
 
 

@@ -68,8 +68,7 @@ def _log_to_dict(log: TicketLog) -> dict[str, Any]:
     return {
         "ticket_log_id": log.ticket_log_id,
         "ticket_id": log.ticket_id,
-        "entity": log.entity.name if log.entity else None,
-        "entity_slug": log.entity.slug if log.entity else None,
+        "entity": log.entity.slug if log.entity else None,
         "action": log.action.value,
         "details": log.details,
         "created_at": log.created_at.isoformat(),
@@ -81,11 +80,9 @@ def _comment_to_dict(comment: Comment) -> dict[str, Any]:
     return {
         "comment_id": comment.comment_id,
         "ticket_id": comment.ticket_id,
-        "entity": comment.entity.name if comment.entity else None,
-        "entity_slug": comment.entity.slug if comment.entity else None,
+        "entity": comment.entity.slug if comment.entity else None,
         "comment": comment.comment,
-        "new_state": comment.new_state.name if comment.new_state else None,
-        "new_state_slug": comment.new_state.slug if comment.new_state else None,
+        "new_state": comment.new_state.slug if comment.new_state else None,
         "created_at": comment.created_at.isoformat(),
     }
 
@@ -96,11 +93,11 @@ def _format_logs_table(logs: list[TicketLog]) -> None:
         return
     print("\nLogs:")
     for log in logs:
-        entity_name = log.entity.name if log.entity else "system"
+        entity_slug = log.entity.slug if log.entity else "system"
         created = log.created_at.isoformat()
         action = log.action.value
         details = f": {log.details}" if log.details else ""
-        print(f"  {created} {action} by {entity_name}{details}")
+        print(f"  {created} {action} by {entity_slug}{details}")
 
 
 def _format_comments_table(comments: list[Comment]) -> None:
@@ -109,7 +106,7 @@ def _format_comments_table(comments: list[Comment]) -> None:
         return
     print("\nComments:")
     for comment in comments:
-        entity_name = comment.entity.name if comment.entity else "unknown"
-        print(f"  {comment.created_at.isoformat()} {entity_name}:")
+        entity_slug = comment.entity.slug if comment.entity else "unknown"
+        print(f"  {comment.created_at.isoformat()} {entity_slug}:")
         for line in comment.comment.splitlines():
             print(f"    {line}")

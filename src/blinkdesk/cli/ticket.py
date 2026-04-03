@@ -84,12 +84,9 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
             {
                 "id": t.id,
                 "title": t.title,
-                "state": t.state.name,
-                "state_slug": t.state.slug,
+                "state": t.state.slug,
                 "priority": t.priority.slug,
-                "priority_slug": t.priority.slug,
-                "assignee": t.assignee.name if t.assignee else None,
-                "assignee_slug": t.assignee.slug if t.assignee else None,
+                "assignee": t.assignee.slug if t.assignee else None,
                 "created_at": t.created_at.isoformat(),
                 "updated_at": t.updated_at.isoformat(),
                 "description": t.description,
@@ -101,20 +98,6 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
                 data = [{**d, "id": f"{prefix}{d['id']}"} for d in data]
             _format_json(data)
         else:
-            if args.slug:
-                data = [
-                    {
-                        "id": d["id"],
-                        "title": d["title"],
-                        "state": d["state_slug"],
-                        "priority": d["priority_slug"],
-                        "assignee": d["assignee_slug"],
-                        "created_at": d["created_at"],
-                        "updated_at": d["updated_at"],
-                        "description": d["description"],
-                    }
-                    for d in data
-                ]
             _format_table(data, prefix=prefix)
     finally:
         system.close()
@@ -138,12 +121,9 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
         data = {
             "id": ticket.id,
             "title": ticket.title,
-            "state": ticket.state.name,
-            "state_slug": ticket.state.slug,
+            "state": ticket.state.slug,
             "priority": ticket.priority.slug,
-            "priority_slug": ticket.priority.slug,
-            "assignee": ticket.assignee.name if ticket.assignee else None,
-            "assignee_slug": ticket.assignee.slug if ticket.assignee else None,
+            "assignee": ticket.assignee.slug if ticket.assignee else None,
             "created_at": ticket.created_at.isoformat(),
             "updated_at": ticket.updated_at.isoformat(),
             "description": ticket.description,
@@ -157,17 +137,6 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
                 data["comments"] = [_comment_to_dict(comment) for comment in comments]
             _format_json(data)
         else:
-            if args.slug:
-                data = {
-                    "id": data["id"],
-                    "title": data["title"],
-                    "state": data["state_slug"],
-                    "priority": data["priority_slug"],
-                    "assignee": data["assignee_slug"],
-                    "created_at": data["created_at"],
-                    "updated_at": data["updated_at"],
-                    "description": data["description"],
-                }
             _format_table([], data, prefix=prefix)
             _format_logs_table(logs)
             _format_comments_table(comments)

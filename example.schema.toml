@@ -20,24 +20,9 @@ lock_entities = false
 # ENTITIES
 # =============================================================================
 # Entities are the people or teams who can own and interact with tickets.
-# Each entity needs a unique slug (identifier) and a display name.
-# 
-# Common use cases:
-# - Individual team members: "alice", "bob", "charlie"
-# - Team groups: "frontend", "backend", "support"
-# - Automated agents: "ai", "github-bot"
+# Each entity is identified by a unique slug.
 
-[[entities]]
-slug = "alice"
-name = "Alice"
-
-[[entities]]
-slug = "bob"
-name = "Bob"
-
-[[entities]]
-slug = "charlie"
-name = "Charlie"
+entities = ["alice", "bob", "charlie"]
 
 # =============================================================================
 # STATES
@@ -45,54 +30,18 @@ name = "Charlie"
 # States represent the stages a ticket can be in. Design these to match
 # your workflow. Simple workflows might have 3 states, complex ones might
 # have 6-10.
-#
-# Each state needs:
-# - slug: machine-readable identifier (used in API, filters)
-# - name: human-readable display name
 
-# New tickets land here
-[[states]]
-slug = "todo"
-name = "TODO"
-
-# Work is actively in progress
-[[states]]
-slug = "in_progress"
-name = "IN PROGRESS"
-
-# Task is complete
-[[states]]
-slug = "done"
-name = "DONE"
+states = ["todo", "in_progress", "done"]
 
 # =============================================================================
 # TRANSITIONS
 # =============================================================================
 # Transitions define which state changes are allowed. Without a transition
 # defined, a state change will be rejected.
-#
-# Format:
-# - from_state: the current state (must match a state slug above)
-# - to_state: the state to move to (must match a state slug above)
-#
-# This example allows:
-# - TODO -> IN_PROGRESS (starting work)
-# - TODO -> DONE (completing directly, e.g. quick tasks)
-# - IN_PROGRESS -> TODO (putting back)
-# - IN_PROGRESS -> DONE (finishing work)
 
-[[transitions]]
-from_state = "todo"
-to_state = "in_progress"
-
-[[transitions]]
-from_state = "todo"
-to_state = "done"
-
-[[transitions]]
-from_state = "in_progress"
-to_state = "todo"
-
-[[transitions]]
-from_state = "in_progress"
-to_state = "done"
+transitions = [
+    { from = "todo", to = "in_progress" },
+    { from = "todo", to = "done" },
+    { from = "in_progress", to = "todo" },
+    { from = "in_progress", to = "done" },
+]

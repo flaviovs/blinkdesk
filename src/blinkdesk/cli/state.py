@@ -16,6 +16,6 @@ def cmd_state_list(args: argparse.Namespace) -> None:
             print("No states defined.")
             return
         for state in states:
-            print(f"{state.slug} ({state.name})")
+            print(state.slug)
     finally:
         system.close()

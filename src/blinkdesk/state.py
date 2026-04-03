@@ -10,14 +10,6 @@ class TicketState:
 
     state_id: int
     slug: str
-    name: str
-
-    def __post_init__(self) -> None:
-        """Validate state after initialization."""
-        if not self.slug:
-            raise ValueError("slug must be non-empty")
-        if not self.name:
-            raise ValueError("name must be non-empty")
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> "TicketState":
@@ -32,7 +24,6 @@ class TicketState:
         return cls(
             state_id=row["state_id"],
             slug=row["slug"],
-            name=row["name"],
         )
 
 
@@ -54,27 +45,9 @@ class TicketStateMachine:
             List of all ticket states ordered by state_id.
         """
         cursor = self._conn.execute(
-            "SELECT state_id, slug, name FROM ticket_states ORDER BY state_id"
+            "SELECT state_id, slug FROM ticket_states ORDER BY state_id"
         )
         return [TicketState.from_row(row) for row in cursor.fetchall()]
-
-    def get_state_by_name(self, name: str) -> TicketState | None:
-        """Get a state by its name.
-
-        Args:
-            name: Name of the state.
-
-        Returns:
-            The TicketState if found, None otherwise.
-        """
-        cursor = self._conn.execute(
-            "SELECT state_id, slug, name FROM ticket_states WHERE name = ?",
-            (name,),
-        )
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        return TicketState.from_row(row)
 
     def get_state_by_slug(self, slug: str) -> TicketState | None:
         """Get a state by its slug.
@@ -86,7 +59,7 @@ class TicketStateMachine:
             The TicketState if found, None otherwise.
         """
         cursor = self._conn.execute(
-            "SELECT state_id, slug, name FROM ticket_states WHERE slug = ?",
+            "SELECT state_id, slug FROM ticket_states WHERE slug = ?",
             (slug,),
         )
         row = cursor.fetchone()
@@ -94,25 +67,24 @@ class TicketStateMachine:
             return None
         return TicketState.from_row(row)
 
-    def create_state(self, slug: str, name: str) -> TicketState:
+    def create_state(self, slug: str) -> TicketState:
         """Create a new ticket state.
 
         Args:
             slug: URL-friendly slug for the state.
-            name: Human-readable name of the state.
 
         Returns:
             The created TicketState.
         """
         cursor = self._conn.execute(
-            "INSERT INTO ticket_states (slug, name) VALUES (?, ?)",
-            (slug, name),
+            "INSERT INTO ticket_states (slug) VALUES (?)",
+            (slug,),
         )
         self._conn.commit()
         last_id = cursor.lastrowid
         if last_id is None:
             raise ValueError("Failed to create state")
-        return TicketState(state_id=last_id, slug=slug, name=name)
+        return TicketState(state_id=last_id, slug=slug)
 
     def get_allowed_transitions(self, from_state: TicketState) -> list[TicketState]:
         """Get allowed transitions from a given state.
@@ -125,7 +97,7 @@ class TicketStateMachine:
         """
         cursor = self._conn.execute(
             """
-            SELECT ts.state_id, ts.slug, ts.name
+            SELECT ts.state_id, ts.slug
             FROM state_transitions st
             JOIN ticket_states ts ON st.to_state_id = ts.state_id
             WHERE st.from_state_id = ?
@@ -150,21 +122,20 @@ class TicketStateMachine:
         )
         self._conn.commit()
 
-    def get_or_create_state(self, slug: str, name: str) -> TicketState:
+    def get_or_create_state(self, slug: str) -> TicketState:
         """Get a state by slug or create it if it doesn't exist.
 
         Args:
             slug: URL-friendly slug for the state.
-            name: Human-readable name of the state.
 
         Returns:
             The existing or newly created TicketState.
         """
         cursor = self._conn.execute(
-            "SELECT state_id, slug, name FROM ticket_states WHERE slug = ?",
+            "SELECT state_id, slug FROM ticket_states WHERE slug = ?",
             (slug,),
         )
         row = cursor.fetchone()
         if row is not None:
             return TicketState.from_row(row)
-        return self.create_state(slug, name)
+        return self.create_state(slug)

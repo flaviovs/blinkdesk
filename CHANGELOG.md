@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
+> **BC BREAK** marks backward-incompatible changes. These require a fresh database or manual migration. Review carefully before updating.
+
 ## [0.4.0] - 2026-04-02
 
 ### Added
@@ -15,6 +17,12 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 ### Added
 
 - Database migration system for schema version management
+
+### Changed
+
+- **BC BREAK** Simplified schema: entities and states now use slug-only identifiers (no separate "name" field)
+- **BC BREAK** TOML schema format simplified: `entities = ["john", "agent-1"]` instead of table-of-tables
+- **BC BREAK** Removed `--slug` CLI flag (slugs are now used everywhere)
 
 ## [0.3.0] - 2026-04-02
 
