@@ -47,7 +47,8 @@ def _migrate_v0_to_v1(conn: sqlite3.Connection) -> None:
         default_slug = "normal"
 
     conn.execute(
-        "UPDATE tickets SET priority_id = (SELECT priority_id FROM ticket_priorities WHERE slug = ?)",
+        "UPDATE tickets SET priority_id = ("
+        "SELECT priority_id FROM ticket_priorities WHERE slug = ?)",
         (default_slug,),
     )
     conn.commit()

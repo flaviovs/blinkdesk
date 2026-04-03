@@ -26,6 +26,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Changed
 
+- **BC BREAK** `update_ticket()` API no longer accepts description parameter (only title can be updated)
 - **BC BREAK** Simplified schema: entities and states now use slug-only identifiers (no separate "name" field)
 - **BC BREAK** TOML schema format simplified: `entities = ["john", "agent-1"]` instead of table-of-tables
 - **BC BREAK** Removed `--slug` CLI flag (slugs are now used everywhere)

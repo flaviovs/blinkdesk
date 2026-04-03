@@ -91,9 +91,8 @@ class TestBlinkDesk(unittest.TestCase):
         }
         system = self._init_system(data)
         ticket = system.create_ticket("Old title")
-        updated = system.update_ticket(ticket, "New title", "New description")
+        updated = system.update_ticket(ticket, "New title")
         self.assertEqual(updated.title, "New title")
-        self.assertEqual(updated.description, "New description")
 
     def test_assign_and_unassign_ticket(self) -> None:
         data = {

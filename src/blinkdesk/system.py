@@ -309,29 +309,33 @@ class TicketingSystem:
         cursor = self._conn.execute(query, params)
         return [self._ticket_from_row(row) for row in cursor.fetchall()]
 
-    def update_ticket(
-        self, ticket: Ticket, title: str, description: str | None = None
-    ) -> Ticket:
-        """Update a ticket's title and description.
+    def update_ticket(self, ticket: Ticket, title: str) -> Ticket:
+        """Update a ticket's title.
 
         Args:
             ticket: Ticket to update.
             title: New title.
-            description: New description.
 
         Returns:
             The updated Ticket.
         """
+        if title == ticket.title:
+            logger.warning("Ticket #%d title unchanged (same as current)", ticket.id)
+            return ticket
         now = datetime.now(timezone.utc).isoformat()
         self._conn.execute(
             """
-            UPDATE tickets SET title = ?, description = ?, updated_at = ?
+            UPDATE tickets SET title = ?, updated_at = ?
             WHERE ticket_id = ?
             """,
-            (title, description, now, ticket.id),
+            (title, now, ticket.id),
         )
         self._conn.commit()
-        self._log_ticket(ticket.id, TicketLogAction.UPDATED)
+        self._log_ticket(
+            ticket.id,
+            TicketLogAction.UPDATED,
+            details=f"title changed from '{ticket.title}' to '{title}'",
+        )
         logger.info("Updated ticket #%d", ticket.id)
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 

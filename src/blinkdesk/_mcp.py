@@ -127,12 +127,11 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
     @mcp.tool()
     def update_ticket(
         ticket_id: int,
-        title: str | None = None,
-        description: str | None = None,
+        title: str,
     ) -> dict[str, Any]:
-        """Use when modifying the title or description of an existing issue ticket
-        in the ticket tracking system. Provide ticket_id and at least one of title
-        or description. Returns the updated ticket. Throws if ticket not found."""
+        """Use when modifying the title of an existing issue ticket
+        in the ticket tracking system. Provide ticket_id and the new title.
+        Returns the updated ticket. Throws if ticket not found."""
         system = TicketingSystem(database_path)
         try:
             ticket = system.get_ticket(ticket_id)
@@ -140,7 +139,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 formatted_ticket_id = system.format_ticket_id(ticket_id)
                 raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
-            ticket = system.update_ticket(ticket, title or ticket.title, description)
+            ticket = system.update_ticket(ticket, title)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
