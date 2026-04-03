@@ -6,19 +6,16 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 > **BC BREAK** marks backward-incompatible changes. These require a fresh database or manual migration. Review carefully before updating.
 
-## [0.4.0] - 2026-04-02
-
-### Added
-
-- Add `--name` / `-n` flag to `bd mcp` subcommands to customize the MCP server name (default: "BlinkDesk")
-
-## [Unreleased]
+## [0.5.0] - 2026-04-03
 
 ### Fixed
 
 - Fix example.schema.toml parsing issue where all keys were incorrectly placed under `[options]` section
 - Make Python API write operations atomic by using single-transaction boundaries for ticket/system updates, seeding, and migration steps
 - Deleting entities, priorities, and states now reports a friendly "cannot delete" failure when rows are still referenced by tickets/comments
+- `default_priority` now properly stored in config table (moved to `[options]` section)
+- CLI now shows friendly error message when no database is specified (instead of stack trace)
+- `bd config set` now validates that `default_priority` value is a valid priority slug
 
 ### Added
 
@@ -31,24 +28,22 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 - CLI commands to manage states: `bd state add`, `bd state delete`
 - CLI commands to manage state transitions: `bd state transition list`, `bd state transition add`, `bd state transition delete`
 
-### Fixed
-
-- `default_priority` now properly stored in config table (moved to `[options]` section)
-- CLI now shows friendly error message when no database is specified (instead of stack trace)
-- `bd config set` now validates that `default_priority` value is a valid priority slug
-
 ### Changed
 
 - MCP `find_tickets` tool now exposes `order` parameter as enum (discoverable by AI agents)
 - Core library mutation and lifecycle operations now emit `logger.info` entries for better observability
-
-
-### Changed
-
 - **BC BREAK** `update_ticket()` API no longer accepts description parameter (only title can be updated)
 - **BC BREAK** Simplified schema: entities and states now use slug-only identifiers (no separate "name" field)
 - **BC BREAK** TOML schema format simplified: `entities = ["john", "agent-1"]` instead of table-of-tables
 - **BC BREAK** Removed `--slug` CLI flag (slugs are now used everywhere)
+
+## [Unreleased]
+
+## [0.4.0] - 2026-04-02
+
+### Added
+
+- Add `--name` / `-n` flag to `bd mcp` subcommands to customize the MCP server name (default: "BlinkDesk")
 
 ## [0.3.0] - 2026-04-02
 
