@@ -371,7 +371,7 @@ Development
 
 ```bash
 # Run tests
-python -m unittest --buffer --failfast tests/test_blinkdesk.py
+python -m unittest discover -s tests -p "test_*.py" --buffer --failfast
 
 # Run linter
 ruff check src/
@@ -379,6 +379,9 @@ ruff check src/
 # Run type checker
 mypy src/
 ```
+
+Test files are split by concern under `tests/` (for example, `test_system_core.py`,
+`test_cli_ticket.py`, `test_mcp.py`) with shared setup in `tests/_base.py`.
 
 ---
 

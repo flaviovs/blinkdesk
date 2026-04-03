@@ -11,7 +11,12 @@ blinkdesk/
 │   ├── _db.py              # Database schema & initialization
 │   ├── cli/main.py         # Main `bd` CLI script entry point
 │   └── [other modules]     # Value objects: ticket.py, entity.py, etc.
-├── tests/                  # Unit tests (unittest)
+├── tests/                  # Unit tests split by concern
+│   ├── _base.py            # Shared test fixture/helpers
+│   ├── test_system_core.py # TicketingSystem behavior
+│   ├── test_cli_*.py       # CLI command coverage
+│   ├── test_mcp.py         # MCP adapter tests
+│   └── test_*.py           # Additional focused suites
 └── pyproject.toml          # Build configuration
 ```
 
@@ -37,7 +42,7 @@ blinkdesk/
 
 ```bash
 # Run all tests
-python -m unittest --buffer --failfast tests/test_blinkdesk.py
+python -m unittest discover -s tests -p "test_*.py" --buffer --failfast
 
 # Run linter
 ruff check src/

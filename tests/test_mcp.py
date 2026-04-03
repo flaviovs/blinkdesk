@@ -1,0 +1,103 @@
+import sys
+import types
+from typing import Any
+from unittest.mock import patch
+
+from blinkdesk._mcp import create_mcp_server
+from tests._base import BlinkDeskTestCase
+
+
+class TestMcp(BlinkDeskTestCase):
+    def test_mcp_not_found_uses_display_prefix(self) -> None:
+        data = {
+            "states": ["open"],
+            "options": {"display_prefix": "BD-"},
+        }
+        system = self._init_system(data)
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            update_ticket = mcp.tools["update_ticket"]
+            with self.assertRaises(ValueError) as ctx:
+                update_ticket(999, title="Nope")
+
+        self.assertEqual(str(ctx.exception), "Ticket BD-999 not found")
+
+    def test_mcp_custom_server_name(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        captured_name: str = ""
+
+        class FakeFastMCP:
+            def __init__(self, name: str, *_args: Any, **_kwargs: Any) -> None:
+                nonlocal captured_name
+                captured_name = name
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            create_mcp_server(self.db_path, "My Tickets")
+            self.assertEqual(captured_name, "My Tickets")
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            create_mcp_server(self.db_path)
+            self.assertEqual(captured_name, "BlinkDesk")
