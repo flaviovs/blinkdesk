@@ -16,6 +16,9 @@ display_prefix = "#"
 # Set to true for fixed teams, false for dynamic environments.
 lock_entities = false
 
+# Default priority for new tickets (if not specified at creation time)
+default_priority = "normal"
+
 # =============================================================================
 # ENTITIES
 # =============================================================================
@@ -32,6 +35,14 @@ entities = ["alice", "bob", "charlie"]
 # have 6-10.
 
 states = ["todo", "in_progress", "done"]
+
+# =============================================================================
+# PRIORITIES
+# =============================================================================
+# Priorities define the urgency of tickets. Each priority is identified by a slug.
+# If not specified, defaults to "normal".
+
+priorities = ["low", "normal", "high"]
 
 # =============================================================================
 # TRANSITIONS

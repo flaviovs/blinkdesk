@@ -17,6 +17,11 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 ### Added
 
 - Database migration system for schema version management
+- TOML schema now supports priorities configuration (adds `priorities` option)
+
+### Fixed
+
+- `default_priority` now properly stored in config table (moved to `[options]` section)
 
 ### Changed
 

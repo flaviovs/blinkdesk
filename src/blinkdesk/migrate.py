@@ -27,11 +27,28 @@ def _migrate_v0_to_v1(conn: sqlite3.Connection) -> None:
         INSERT INTO ticket_priorities (slug) VALUES ('low');
         INSERT INTO ticket_priorities (slug) VALUES ('normal');
         INSERT INTO ticket_priorities (slug) VALUES ('high');
-
-        UPDATE tickets SET priority_id = (
-            SELECT priority_id FROM ticket_priorities WHERE slug = 'normal'
-        );
         """
+    )
+
+    has_priority_col = conn.execute("PRAGMA table_info(tickets)").fetchall()
+    has_priority_data = any(col[1] == "priority" for col in has_priority_col)
+
+    if has_priority_data:
+        row = conn.execute(
+            """
+            SELECT priority FROM tickets
+            GROUP BY priority
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        default_slug = row["priority"] if row else "normal"
+    else:
+        default_slug = "normal"
+
+    conn.execute(
+        "UPDATE tickets SET priority_id = (SELECT priority_id FROM ticket_priorities WHERE slug = ?)",
+        (default_slug,),
     )
     conn.commit()
 

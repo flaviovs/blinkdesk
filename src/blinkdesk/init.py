@@ -90,7 +90,7 @@ def seed_db(db_path: str, config_path: str) -> None:
         _seed_priorities(
             conn,
             config.get("priorities", []),
-            config.get("default_priority", "normal"),
+            config.get("options", {}).get("default_priority", "normal"),
         )
         _seed_transitions(conn, config.get("transitions", []))
         _seed_options(conn, config.get("options", {}))
@@ -119,7 +119,7 @@ def seed_db_from_dict(db_path: str, data: dict[str, Any]) -> None:
         _seed_priorities(
             conn,
             data.get("priorities", []),
-            data.get("default_priority", "normal"),
+            data.get("options", {}).get("default_priority", "normal"),
         )
         _seed_transitions(conn, data.get("transitions", []))
         _seed_options(conn, data.get("options", {}))
