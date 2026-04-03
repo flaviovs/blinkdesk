@@ -4,22 +4,6 @@
 # Copy this file and customize it for your needs.
 
 # =============================================================================
-# OPTIONS
-# =============================================================================
-# Optional runtime options for system behavior.
-
-[options]
-# Prefix shown before ticket IDs when displaying (e.g., "#42" or "TICKET-42")
-display_prefix = "#"
-
-# If true, prevents creating new entities via API/CLI after initial setup.
-# Set to true for fixed teams, false for dynamic environments.
-lock_entities = false
-
-# Default priority for new tickets (if not specified at creation time)
-default_priority = "normal"
-
-# =============================================================================
 # ENTITIES
 # =============================================================================
 # Entities are the people or teams who can own and interact with tickets.
@@ -56,3 +40,19 @@ transitions = [
     { from = "in_progress", to = "todo" },
     { from = "in_progress", to = "done" },
 ]
+
+# =============================================================================
+# OPTIONS
+# =============================================================================
+# Optional runtime options for system behavior.
+
+[options]
+# Prefix shown before ticket IDs when displaying (e.g., "#42" or "TICKET-42")
+display_prefix = "#"
+
+# If true, prevents creating new entities via API/CLI after initial setup.
+# Set to true for fixed teams, false for dynamic environments.
+lock_entities = false
+
+# Default priority for new tickets (if not specified at creation time)
+default_priority = "normal"

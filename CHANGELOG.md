@@ -14,6 +14,10 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix example.schema.toml parsing issue where all keys were incorrectly placed under `[options]` section
+
 ### Added
 
 - Database migration system for schema version management

@@ -9,7 +9,7 @@ blinkdesk/
 ├── src/blinkdesk/
 │   ├── system.py           # TicketingSystem (main entry point)
 │   ├── _db.py              # Database schema & initialization
-│   ├── cli/main.py         # Main CLI entry point
+│   ├── cli/main.py         # Main `bd` CLI script entry point
 │   └── [other modules]     # Value objects: ticket.py, entity.py, etc.
 ├── tests/                  # Unit tests (unittest)
 └── pyproject.toml          # Build configuration
