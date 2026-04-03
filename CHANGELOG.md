@@ -21,6 +21,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 - Priority ordering via explicit positions: `bd priority add <slug> <position>`
 - `bd priority rename` now supports `--position` to change priority order
 - MCP `list_ticket_priorities` now returns ordered list of priority slugs
+- CLI commands `bd entity add <slug>` and `bd entity delete <entity_id>`
 
 ### Fixed
 

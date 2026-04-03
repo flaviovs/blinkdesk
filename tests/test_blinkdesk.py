@@ -7,13 +7,14 @@ import sys
 import tempfile
 import types
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, redirect_stderr
 from unittest.mock import patch
 from typing import Any
 
 from blinkdesk import TicketingSystem, init_db
 from blinkdesk._mcp import create_mcp_server
 from blinkdesk.cli.db import cmd_db_get_journal_mode, cmd_db_set_journal_mode
+from blinkdesk.cli.entity import cmd_entity_add, cmd_entity_delete
 from blinkdesk.cli.ticket import cmd_ticket_list, cmd_ticket_get
 from blinkdesk.init import seed_db_from_dict
 
@@ -275,6 +276,78 @@ class TestBlinkDesk(unittest.TestCase):
         self.assertEqual(len(tickets), 2)
         self.assertEqual(tickets[0].title, "Ticket 1")
         self.assertEqual(tickets[1].title, "Ticket 2")
+
+    def test_entity_add(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            slug="alice",
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_entity_add(args)
+        output = out.getvalue()
+        self.assertIn("Entity added: alice", output)
+
+        entity = system.get_entity_by_slug("alice")
+        self.assertIsNotNone(entity)
+        self.assertEqual(entity.slug, "alice")
+
+    def test_entity_delete_succeeds(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            slug="alice",
+        )
+        cmd_entity_add(args)
+
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            entity_id=entity.entity_id,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_entity_delete(args)
+        output = out.getvalue()
+        self.assertIn("Entity deleted: alice", output)
+
+        deleted = system.get_entity(entity.entity_id)
+        self.assertIsNone(deleted)
+
+    def test_entity_delete_linked_to_ticket(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.assign_ticket(ticket, entity)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            entity_id=entity.entity_id,
+        )
+        out = io.StringIO()
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with redirect_stdout(out), redirect_stderr(err):
+                cmd_entity_delete(args)
+        output = err.getvalue()
+        self.assertIn("Cannot delete entity 'alice'", output)
 
     def test_close(self) -> None:
         data = {

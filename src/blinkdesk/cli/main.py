@@ -17,7 +17,7 @@ from .db import (
     cmd_db_vacuum,
     cmd_init,
 )
-from .entity import cmd_entity_list
+from .entity import cmd_entity_add, cmd_entity_delete, cmd_entity_list
 from .mcp import add_mcp_subparser
 from .priority import (
     cmd_priority_add,
@@ -179,6 +179,14 @@ def main() -> None:
 
     entity_list = p_entity_sub.add_parser("list", help="List all entities")
     entity_list.set_defaults(func=cmd_entity_list)
+
+    entity_add = p_entity_sub.add_parser("add", help="Add an entity")
+    entity_add.add_argument("slug", help="Entity slug")
+    entity_add.set_defaults(func=cmd_entity_add)
+
+    entity_delete = p_entity_sub.add_parser("delete", help="Delete an entity")
+    entity_delete.add_argument("entity_id", type=int, help="Entity ID")
+    entity_delete.set_defaults(func=cmd_entity_delete)
 
     # state
     p_state = subparsers.add_parser("state", help="State operations")
