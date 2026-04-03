@@ -20,7 +20,7 @@ dev = ["ruff", "mypy"]
 mcp = ["mcp>=1.0.0"]
 
 [project.scripts]
-bd = "blinkdesk.cli.main:main"
+bd = "blinkdesk.__main__:main"
 
 [build-system]
 requires = ["flit_core>=3.4"]
