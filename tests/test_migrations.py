@@ -2,12 +2,28 @@ import sqlite3
 from unittest.mock import patch
 
 import blinkdesk.migrate as migrate_module
+from blinkdesk._db import CURRENT_SCHEMA_VERSION
 from blinkdesk import init_db
 from blinkdesk.init import seed_db_from_dict
 from tests._base import BlinkDeskTestCase
 
 
 class TestMigrations(BlinkDeskTestCase):
+    def test_run_migrations_logs_when_up_to_date(self) -> None:
+        init_db(self.db_path)
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            conn.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
+            with self.assertLogs("blinkdesk.migrate", level="INFO") as cm:
+                migrate_module.run_migrations(conn)
+
+            self.assertTrue(
+                any("Database schema is up to date" in msg for msg in cm.output)
+            )
+        finally:
+            conn.close()
+
     def test_seed_db_from_dict_rolls_back_on_error(self) -> None:
         init_db(self.db_path)
 

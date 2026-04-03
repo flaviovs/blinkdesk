@@ -1,9 +1,12 @@
 """Database initialization and schema management."""
 
+import logging
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
+
+logger = logging.getLogger(__name__)
 
 CURRENT_SCHEMA_VERSION = 2
 
@@ -29,6 +32,7 @@ def set_schema_version(conn: sqlite3.Connection, version: int) -> None:
         version: Schema version to set.
     """
     conn.execute(f"PRAGMA user_version = {version}")
+    logger.info("Set schema version to %d", version)
 
 
 def init_db(db_path: str) -> sqlite3.Connection:
@@ -51,6 +55,7 @@ def init_db(db_path: str) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA auto_vacuum = INCREMENTAL")
     _create_schema(conn)
+    logger.info("Initialized new database: %s", db_path)
     return conn
 
 
@@ -67,6 +72,7 @@ def _init_db(db_path: str) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     _create_schema(conn)
+    logger.info("Initialized database schema: %s", db_path)
     return conn
 
 
@@ -137,6 +143,7 @@ def _create_schema(conn: sqlite3.Connection) -> None:
         """
     )
     conn.commit()
+    logger.info("Created or verified database schema")
 
 
 @contextmanager

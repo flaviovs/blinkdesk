@@ -1,7 +1,10 @@
 """Ticket priority value object and manager."""
 
+import logging
 import sqlite3
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,6 +121,7 @@ class TicketPriorityManager:
                 "INSERT INTO ticket_priorities (priority_id, slug) VALUES (?, ?)",
                 (position, slug),
             )
+        logger.info("Created priority: %s (position=%d)", slug, position)
         return TicketPriority(priority_id=position, slug=slug)
 
     def rename_priority(
@@ -164,6 +168,12 @@ class TicketPriorityManager:
                     priority.priority_id,
                 ),
             )
+        logger.info(
+            "Renamed priority: %s -> %s (position=%d)",
+            old_slug,
+            new_slug,
+            new_position if new_position is not None else priority.priority_id,
+        )
         return TicketPriority(
             priority_id=new_position
             if new_position is not None
@@ -187,9 +197,14 @@ class TicketPriorityManager:
             )
             count = cursor.fetchone()[0]
             if count > 0:
+                logger.info(
+                    "Skipped deleting priority %s: priority is used by tickets",
+                    priority.slug,
+                )
                 return False
             self._conn.execute(
                 "DELETE FROM ticket_priorities WHERE priority_id = ?",
                 (priority.priority_id,),
             )
+        logger.info("Deleted priority: %s", priority.slug)
         return True

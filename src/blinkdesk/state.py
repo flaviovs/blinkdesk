@@ -1,7 +1,10 @@
 """Ticket state and state machine."""
 
+import logging
 import sqlite3
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +87,7 @@ class TicketStateMachine:
         last_id = cursor.lastrowid
         if last_id is None:
             raise ValueError("Failed to create state")
+        logger.info("Created state: %s", slug)
         return TicketState(state_id=last_id, slug=slug)
 
     def get_allowed_transitions(self, from_state: TicketState) -> list[TicketState]:
@@ -121,6 +125,7 @@ class TicketStateMachine:
                 """,
                 (from_state.state_id, to_state.state_id),
             )
+        logger.info("Added state transition: %s -> %s", from_state.slug, to_state.slug)
 
     def get_or_create_state(self, slug: str) -> TicketState:
         """Get a state by slug or create it if it doesn't exist.
@@ -179,6 +184,10 @@ class TicketStateMachine:
                 "WHERE from_state_id = ? AND to_state_id = ?",
                 (from_state.state_id, to_state.state_id),
             )
+        if cursor.rowcount > 0:
+            logger.info(
+                "Deleted state transition: %s -> %s", from_state.slug, to_state.slug
+            )
         return cursor.rowcount > 0
 
     def delete_state(self, state: TicketState) -> bool:
@@ -197,6 +206,9 @@ class TicketStateMachine:
             )
             count = cursor.fetchone()[0]
             if count > 0:
+                logger.info(
+                    "Skipped deleting state %s: state is used by tickets", state.slug
+                )
                 return False
             self._conn.execute(
                 "DELETE FROM state_transitions "
@@ -207,4 +219,5 @@ class TicketStateMachine:
                 "DELETE FROM ticket_states WHERE state_id = ?",
                 (state.state_id,),
             )
+        logger.info("Deleted state: %s", state.slug)
         return True

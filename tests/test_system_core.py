@@ -272,6 +272,40 @@ class TestSystemCore(BlinkDeskTestCase):
 
         self.assertIsNone(system.get_config("nonexistent"))
 
+    def test_set_config_logs_info(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        with self.assertLogs("blinkdesk.system", level="INFO") as cm:
+            system.set_config("lock_entities", "true")
+
+        self.assertTrue(
+            any("Set config value: lock_entities" in msg for msg in cm.output)
+        )
+
+    def test_priority_manager_logs_info_for_mutations(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        manager = system.get_priority_machine()
+
+        with self.assertLogs("blinkdesk.priority", level="INFO") as cm:
+            created = manager.create_priority("urgent", 40)
+            renamed = manager.rename_priority("urgent", "critical", 50)
+            deleted = manager.delete_priority(renamed)
+
+        self.assertEqual(created.slug, "urgent")
+        self.assertEqual(renamed.slug, "critical")
+        self.assertTrue(deleted)
+        self.assertTrue(any("Created priority: urgent" in msg for msg in cm.output))
+        self.assertTrue(
+            any("Renamed priority: urgent -> critical" in msg for msg in cm.output)
+        )
+        self.assertTrue(any("Deleted priority: critical" in msg for msg in cm.output))
+
     def test_lock_entities_property(self) -> None:
         data = {
             "states": ["open"],

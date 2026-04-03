@@ -2,6 +2,18 @@ from tests._base import BlinkDeskTestCase
 
 
 class TestStateMachine(BlinkDeskTestCase):
+    def test_create_state_logs_info(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        with self.assertLogs("blinkdesk.state", level="INFO") as cm:
+            state = system.get_state_machine().create_state("closed")
+
+        self.assertEqual(state.slug, "closed")
+        self.assertTrue(any("Created state: closed" in msg for msg in cm.output))
+
     def test_delete_state_with_tickets_fails(self) -> None:
         data = {
             "entities": ["alice"],
@@ -87,3 +99,20 @@ class TestStateMachine(BlinkDeskTestCase):
 
         result = system.get_state_machine().delete_transition(open_state, pending_state)
         self.assertFalse(result)
+
+    def test_add_transition_logs_info(self) -> None:
+        data = {
+            "states": ["open", "closed"],
+        }
+        system = self._init_system(data)
+        open_state = system.get_state_machine().get_state_by_slug("open")
+        closed_state = system.get_state_machine().get_state_by_slug("closed")
+        assert open_state is not None
+        assert closed_state is not None
+
+        with self.assertLogs("blinkdesk.state", level="INFO") as cm:
+            system.get_state_machine().add_transition(open_state, closed_state)
+
+        self.assertTrue(
+            any("Added state transition: open -> closed" in msg for msg in cm.output)
+        )

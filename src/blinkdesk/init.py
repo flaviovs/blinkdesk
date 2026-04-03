@@ -1,5 +1,6 @@
 """Database initialization and seeding from a TOML schema file."""
 
+import logging
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,8 @@ from blinkdesk._db import (
     init_db as _init_db,
     set_schema_version,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _validate_no_name_field(config: dict[str, Any], section: str) -> None:
@@ -57,7 +60,9 @@ def init_db(db_path: str) -> sqlite3.Connection:
     Raises:
         FileExistsError: If the database file already exists.
     """
-    return _init_db(db_path)
+    conn = _init_db(db_path)
+    logger.info("Initialized database connection: %s", db_path)
+    return conn
 
 
 def seed_db(db_path: str, config_path: str) -> None:
@@ -79,6 +84,7 @@ def seed_db(db_path: str, config_path: str) -> None:
         config = tomllib.load(f)
 
     _validate_config(config)
+    logger.info("Seeding database from schema file: %s", config_path)
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -96,6 +102,7 @@ def seed_db(db_path: str, config_path: str) -> None:
             _seed_transitions(conn, config.get("transitions", []))
             _seed_options(conn, config.get("options", {}))
             set_schema_version(conn, CURRENT_SCHEMA_VERSION)
+            logger.info("Seeded database from schema file")
     finally:
         conn.close()
 
@@ -111,6 +118,7 @@ def seed_db_from_dict(db_path: str, data: dict[str, Any]) -> None:
         ValueError: If the configuration is invalid.
     """
     _validate_config(data)
+    logger.info("Seeding database from in-memory schema")
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -126,6 +134,7 @@ def seed_db_from_dict(db_path: str, data: dict[str, Any]) -> None:
             _seed_transitions(conn, data.get("transitions", []))
             _seed_options(conn, data.get("options", {}))
             set_schema_version(conn, CURRENT_SCHEMA_VERSION)
+            logger.info("Seeded database from in-memory schema")
     finally:
         conn.close()
 
@@ -142,6 +151,8 @@ def _seed_entities(conn: sqlite3.Connection, entities: list[str]) -> None:
             "INSERT INTO entities (slug) VALUES (?)",
             (slug,),
         )
+    if entities:
+        logger.info("Seeded entities: count=%d", len(entities))
 
 
 def _seed_states(conn: sqlite3.Connection, states: list[str]) -> None:
@@ -156,6 +167,8 @@ def _seed_states(conn: sqlite3.Connection, states: list[str]) -> None:
             "INSERT INTO ticket_states (slug) VALUES (?)",
             (slug,),
         )
+    if states:
+        logger.info("Seeded states: count=%d", len(states))
 
 
 def _seed_priorities(
@@ -182,6 +195,7 @@ def _seed_priorities(
             "INSERT OR IGNORE INTO ticket_priorities (priority_id, slug) VALUES (?, ?)",
             (pos, slug),
         )
+    logger.info("Seeded priorities: count=%d", len(priorities))
 
     cursor = conn.execute(
         "SELECT priority_id FROM ticket_priorities WHERE slug = ?",
@@ -228,6 +242,8 @@ def _seed_transitions(
             "(from_state_id, to_state_id) VALUES (?, ?)",
             (from_id, to_id),
         )
+    if transitions:
+        logger.info("Seeded transitions: count=%d", len(transitions))
 
 
 def _seed_options(conn: sqlite3.Connection, options: dict[str, Any]) -> None:
@@ -252,6 +268,8 @@ def _seed_options(conn: sqlite3.Connection, options: dict[str, Any]) -> None:
             "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
             ("display_prefix", "#"),
         )
+
+    logger.info("Seeded config options: count=%d", len(options))
 
 
 def get_config(db_path: str, key: str) -> str | None:
@@ -288,5 +306,6 @@ def set_config(db_path: str, key: str, value: str) -> None:
                 "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
                 (key, value),
             )
+        logger.info("Set config value: %s", key)
     finally:
         conn.close()

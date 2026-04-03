@@ -1,5 +1,6 @@
 """Database migration system."""
 
+import logging
 import sqlite3
 from collections.abc import Callable
 
@@ -10,6 +11,7 @@ from blinkdesk._db import (
 )
 
 MIGRATIONS: list[tuple[int, Callable[[sqlite3.Connection], None]]] = []
+logger = logging.getLogger(__name__)
 
 
 def _migrate_v0_to_v1(conn: sqlite3.Connection) -> None:
@@ -76,6 +78,7 @@ def run_migrations(conn: sqlite3.Connection) -> None:
     """
     db_version = get_schema_version(conn)
     target = CURRENT_SCHEMA_VERSION
+    logger.info("Checking migrations: current=%d target=%d", db_version, target)
 
     if db_version > target:
         raise RuntimeError(
@@ -85,7 +88,12 @@ def run_migrations(conn: sqlite3.Connection) -> None:
 
     for from_ver, migrate_fn in MIGRATIONS:
         if from_ver >= db_version:
+            logger.info("Applying migration v%d -> v%d", from_ver, from_ver + 1)
             with conn:
                 migrate_fn(conn)
                 db_version = from_ver + 1
                 set_schema_version(conn, db_version)
+            logger.info("Applied migration v%d -> v%d", from_ver, db_version)
+
+    if db_version == target:
+        logger.info("Database schema is up to date at v%d", db_version)

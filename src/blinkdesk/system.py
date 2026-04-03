@@ -669,6 +669,7 @@ class TicketingSystem:
                 "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
                 (key, value),
             )
+        logger.info("Set config value: %s", key)
 
     @property
     def lock_entities(self) -> bool:
