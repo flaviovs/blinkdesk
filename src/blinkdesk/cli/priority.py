@@ -17,7 +17,7 @@ def cmd_priority_list(args: argparse.Namespace) -> None:
             print("No priorities defined.")
             return
         for priority in priorities:
-            print(priority.slug)
+            print(f"{priority.priority_id}: {priority.slug}")
     finally:
         system.close()
 
