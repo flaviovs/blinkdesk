@@ -141,17 +141,17 @@ class TicketingSystem:
         Returns:
             True if deleted, False if entity is assigned to tickets.
         """
-        with self._conn:
-            cursor = self._conn.execute(
-                "SELECT COUNT(*) FROM tickets WHERE assignee_entity_id = ?",
-                (entity.entity_id,),
+        try:
+            with self._conn:
+                self._conn.execute(
+                    "DELETE FROM entities WHERE entity_id = ?", (entity.entity_id,)
+                )
+        except sqlite3.IntegrityError:
+            logger.info(
+                "Skipped deleting entity %s: entity is linked to tickets",
+                entity.slug,
             )
-            count = cursor.fetchone()[0]
-            if count > 0:
-                return False
-            self._conn.execute(
-                "DELETE FROM entities WHERE entity_id = ?", (entity.entity_id,)
-            )
+            return False
         logger.info("Deleted entity: %s", entity.slug)
         return True
 

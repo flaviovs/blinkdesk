@@ -191,33 +191,30 @@ class TicketStateMachine:
         return cursor.rowcount > 0
 
     def delete_state(self, state: TicketState) -> bool:
-        """Delete a state if no tickets have this state.
+        """Delete a state if it is not referenced by tickets or comments.
 
         Args:
             state: State to delete.
 
         Returns:
-            True if deleted, False if tickets exist with this state.
+            True if deleted, False if tickets or comments reference this state.
         """
-        with self._conn:
-            cursor = self._conn.execute(
-                "SELECT COUNT(*) FROM tickets WHERE state_id = ?",
-                (state.state_id,),
-            )
-            count = cursor.fetchone()[0]
-            if count > 0:
-                logger.info(
-                    "Skipped deleting state %s: state is used by tickets", state.slug
+        try:
+            with self._conn:
+                self._conn.execute(
+                    "DELETE FROM state_transitions "
+                    "WHERE from_state_id = ? OR to_state_id = ?",
+                    (state.state_id, state.state_id),
                 )
-                return False
-            self._conn.execute(
-                "DELETE FROM state_transitions "
-                "WHERE from_state_id = ? OR to_state_id = ?",
-                (state.state_id, state.state_id),
+                self._conn.execute(
+                    "DELETE FROM ticket_states WHERE state_id = ?",
+                    (state.state_id,),
+                )
+        except sqlite3.IntegrityError:
+            logger.info(
+                "Skipped deleting state %s: state is used by tickets or comments",
+                state.slug,
             )
-            self._conn.execute(
-                "DELETE FROM ticket_states WHERE state_id = ?",
-                (state.state_id,),
-            )
+            return False
         logger.info("Deleted state: %s", state.slug)
         return True

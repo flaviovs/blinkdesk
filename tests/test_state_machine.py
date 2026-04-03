@@ -61,6 +61,30 @@ class TestStateMachine(BlinkDeskTestCase):
         transitions = system.get_state_machine().get_all_transitions()
         self.assertEqual(len(transitions), 0)
 
+    def test_delete_state_referenced_by_comment_fails(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open", "closed", "reopened"],
+            "transitions": [
+                {"from": "open", "to": "closed"},
+                {"from": "closed", "to": "reopened"},
+            ],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        closed = system.get_state_machine().get_state_by_slug("closed")
+        reopened = system.get_state_machine().get_state_by_slug("reopened")
+        assert entity is not None
+        assert closed is not None
+        assert reopened is not None
+
+        ticket = system.create_ticket("Test")
+        ticket = system.add_comment(ticket, entity, "Close it", new_state=closed)
+        system.transition_ticket(ticket, reopened)
+
+        result = system.get_state_machine().delete_state(closed)
+        self.assertFalse(result)
+
     def test_get_all_transitions(self) -> None:
         data = {
             "states": ["open", "pending", "closed"],

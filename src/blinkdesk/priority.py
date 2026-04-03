@@ -190,21 +190,17 @@ class TicketPriorityManager:
         Returns:
             True if deleted, False if tickets exist with this priority.
         """
-        with self._conn:
-            cursor = self._conn.execute(
-                "SELECT COUNT(*) FROM tickets WHERE priority_id = ?",
-                (priority.priority_id,),
-            )
-            count = cursor.fetchone()[0]
-            if count > 0:
-                logger.info(
-                    "Skipped deleting priority %s: priority is used by tickets",
-                    priority.slug,
+        try:
+            with self._conn:
+                self._conn.execute(
+                    "DELETE FROM ticket_priorities WHERE priority_id = ?",
+                    (priority.priority_id,),
                 )
-                return False
-            self._conn.execute(
-                "DELETE FROM ticket_priorities WHERE priority_id = ?",
-                (priority.priority_id,),
+        except sqlite3.IntegrityError:
+            logger.info(
+                "Skipped deleting priority %s: priority is used by tickets",
+                priority.slug,
             )
+            return False
         logger.info("Deleted priority: %s", priority.slug)
         return True

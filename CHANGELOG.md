@@ -18,6 +18,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 - Fix example.schema.toml parsing issue where all keys were incorrectly placed under `[options]` section
 - Make Python API write operations atomic by using single-transaction boundaries for ticket/system updates, seeding, and migration steps
+- Deleting entities, priorities, and states now reports a friendly "cannot delete" failure when rows are still referenced by tickets/comments
 
 ### Added
 

@@ -306,6 +306,21 @@ class TestSystemCore(BlinkDeskTestCase):
         )
         self.assertTrue(any("Deleted priority: critical" in msg for msg in cm.output))
 
+    def test_delete_priority_with_tickets_fails(self) -> None:
+        data = {
+            "states": ["open"],
+            "priorities": ["normal", "high"],
+        }
+        system = self._init_system(data)
+        high = system.get_priority_machine().get_priority_by_slug("high")
+        assert high is not None
+
+        ticket = system.create_ticket("Test")
+        system.set_ticket_priority(ticket, high)
+
+        result = system.get_priority_machine().delete_priority(high)
+        self.assertFalse(result)
+
     def test_lock_entities_property(self) -> None:
         data = {
             "states": ["open"],
