@@ -6,7 +6,11 @@ from typing import Any
 
 import tomllib
 
-from blinkdesk._db import init_db as _init_db
+from blinkdesk._db import (
+    CURRENT_SCHEMA_VERSION,
+    init_db as _init_db,
+    set_schema_version,
+)
 
 
 def _convert_list_to_dict(items: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
@@ -74,6 +78,7 @@ def seed_db(db_path: str, config_path: str) -> None:
             conn, _convert_transitions_list(config.get("transitions", []))
         )
         _seed_options(conn, config.get("options", {}))
+        set_schema_version(conn, CURRENT_SCHEMA_VERSION)
     finally:
         conn.close()
 
@@ -122,6 +127,7 @@ def seed_db_from_dict(db_path: str, data: dict[str, Any]) -> None:
         options = data.get("options", {})
         if options:
             _seed_options(conn, options)
+        set_schema_version(conn, CURRENT_SCHEMA_VERSION)
     finally:
         conn.close()
 

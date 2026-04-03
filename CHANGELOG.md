@@ -10,6 +10,12 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 - Add `--name` / `-n` flag to `bd mcp` subcommands to customize the MCP server name (default: "BlinkDesk")
 
+## [Unreleased]
+
+### Added
+
+- Database migration system for schema version management
+
 ## [0.3.0] - 2026-04-02
 
 ### Added

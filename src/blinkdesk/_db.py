@@ -5,6 +5,31 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
+CURRENT_SCHEMA_VERSION = 0
+
+
+def get_schema_version(conn: sqlite3.Connection) -> int:
+    """Get the schema version from the database.
+
+    Args:
+        conn: Database connection.
+
+    Returns:
+        The schema version, or 0 if not set.
+    """
+    version = conn.execute("PRAGMA user_version").fetchone()[0]
+    return version if version is not None else 0
+
+
+def set_schema_version(conn: sqlite3.Connection, version: int) -> None:
+    """Set the schema version in the database.
+
+    Args:
+        conn: Database connection.
+        version: Schema version to set.
+    """
+    conn.execute(f"PRAGMA user_version = {version}")
+
 
 def init_db(db_path: str) -> sqlite3.Connection:
     """Initialize database connection and create schema.

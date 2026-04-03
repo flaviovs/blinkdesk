@@ -8,6 +8,7 @@ from pathlib import Path
 
 from blinkdesk.comment import Comment
 from blinkdesk.entity import Entity
+from blinkdesk.migrate import run_migrations
 from blinkdesk.state import TicketState, TicketStateMachine
 from blinkdesk.ticket import Ticket
 from blinkdesk.ticket_log import TicketLog, TicketLogAction
@@ -45,6 +46,7 @@ class TicketingSystem:
         self._conn = sqlite3.connect(db_path)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
+        run_migrations(self._conn)
         self._state_machine = TicketStateMachine(self._conn)
 
     def close(self) -> None:
