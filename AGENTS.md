@@ -87,11 +87,13 @@ bd -d mydb.db mcp stdio
 - Only bump version when explicitly requested
 - Determine bump level according to changes since last version
 - Use Semantic Versioning: patch for bug fixes, minor for new features
-- Never bump major unless explicitly requested
+- **Never bump major version unless the user explicitly requests it**
 - After bumping version, you must ensure that `CHANGELOG.md` is updated
+- When releasing a version, keep the `## Unreleased` section for future changes
 
 ## Changelog Guidelines
 
+- Sections must follow the order: `## Unreleased` first, then `## X.Y.Z` (released versions)
 - Changes must always be added under an `## Unreleased` section
 - One changeset = one line
 - Focus on user-facing behavior, not implementation details
