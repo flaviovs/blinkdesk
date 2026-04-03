@@ -10,18 +10,19 @@ if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
 
-def create_mcp_server(database_path: str) -> "FastMCP":
+def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "FastMCP":
     """Create an MCP server with BlinkDesk tools.
 
     Args:
         database_path: Path to the SQLite database.
+        server_name: Name for the MCP server (default: "BlinkDesk").
 
     Returns:
         A FastMCP server instance.
     """
     from mcp.server.fastmcp import FastMCP
 
-    mcp = FastMCP("BlinkDesk", json_response=True)
+    mcp = FastMCP(server_name, json_response=True)
 
     @mcp.tool()
     def find_tickets(

@@ -719,6 +719,58 @@ class TestBlinkDesk(unittest.TestCase):
 
         self.assertEqual(str(ctx.exception), "Ticket BD-999 not found")
 
+    def test_mcp_custom_server_name(self) -> None:
+        data = {
+            "states": [{"name": "Open", "slug": "open"}],
+        }
+        system = self._init_system(data)
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        captured_name: str = ""
+
+        class FakeFastMCP:
+            def __init__(self, name: str, *_args: Any, **_kwargs: Any) -> None:
+                nonlocal captured_name
+                captured_name = name
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path, "My Tickets")
+            self.assertEqual(captured_name, "My Tickets")
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            self.assertEqual(captured_name, "BlinkDesk")
+
 
 if __name__ == "__main__":
     unittest.main()

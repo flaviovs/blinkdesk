@@ -34,10 +34,11 @@ def cmd_mcp_stdio(args: argparse.Namespace) -> None:
     """Run MCP server with stdio transport."""
     _check_mcp_installed()
     database_path = _get_database_path(args)
+    server_name = args.name
 
     from blinkdesk._mcp import create_mcp_server
 
-    mcp = create_mcp_server(database_path)
+    mcp = create_mcp_server(database_path, server_name)
     mcp.run(transport="stdio")
 
 
@@ -45,10 +46,11 @@ def cmd_mcp_streamable_http(args: argparse.Namespace) -> None:
     """Run MCP server with streamable-http transport."""
     _check_mcp_installed()
     database_path = _get_database_path(args)
+    server_name = args.name
 
     from blinkdesk._mcp import create_mcp_server
 
-    mcp = create_mcp_server(database_path)
+    mcp = create_mcp_server(database_path, server_name)
     mcp.settings.host = args.host
     mcp.settings.port = args.port
     mcp.run(transport="streamable-http")
@@ -58,10 +60,11 @@ def cmd_mcp_sse(args: argparse.Namespace) -> None:
     """Run MCP server with SSE transport."""
     _check_mcp_installed()
     database_path = _get_database_path(args)
+    server_name = args.name
 
     from blinkdesk._mcp import create_mcp_server
 
-    mcp = create_mcp_server(database_path)
+    mcp = create_mcp_server(database_path, server_name)
     mcp.settings.host = args.host
     mcp.settings.port = args.port
     mcp.run(transport="sse")
@@ -76,10 +79,16 @@ def add_mcp_subparser(subparsers) -> None:  # type: ignore[no-untyped-def]
     p_stdio = p_mcp_sub.add_parser(
         "stdio", help="Start MCP server with stdio transport"
     )
+    p_stdio.add_argument(
+        "--name", "-n", default="BlinkDesk", help="Server name (default: BlinkDesk)"
+    )
     p_stdio.set_defaults(func=cmd_mcp_stdio)
 
     p_streamable = p_mcp_sub.add_parser(
         "streamable-http", help="Start MCP server with streamable-http transport"
+    )
+    p_streamable.add_argument(
+        "--name", "-n", default="BlinkDesk", help="Server name (default: BlinkDesk)"
     )
     p_streamable.add_argument(
         "--host", default="localhost", help="HTTP host (default: localhost)"
@@ -90,6 +99,9 @@ def add_mcp_subparser(subparsers) -> None:  # type: ignore[no-untyped-def]
     p_streamable.set_defaults(func=cmd_mcp_streamable_http)
 
     p_sse = p_mcp_sub.add_parser("sse", help="Start MCP server with SSE transport")
+    p_sse.add_argument(
+        "--name", "-n", default="BlinkDesk", help="Server name (default: BlinkDesk)"
+    )
     p_sse.add_argument(
         "--host", default="localhost", help="HTTP host (default: localhost)"
     )
