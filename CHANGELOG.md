@@ -22,6 +22,8 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 - `bd priority rename` now supports `--position` to change priority order
 - MCP `list_ticket_priorities` now returns ordered list of priority slugs
 - CLI commands `bd entity add <slug>` and `bd entity delete <entity_id>`
+- CLI commands to manage states: `bd state add`, `bd state delete`
+- CLI commands to manage state transitions: `bd state transition list`, `bd state transition add`, `bd state transition delete`
 
 ### Fixed
 

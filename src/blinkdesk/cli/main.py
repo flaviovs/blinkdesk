@@ -25,7 +25,14 @@ from .priority import (
     cmd_priority_list,
     cmd_priority_rename,
 )
-from .state import cmd_state_list
+from .state import (
+    cmd_state_add,
+    cmd_state_delete,
+    cmd_state_list,
+    cmd_state_transition_add,
+    cmd_state_transition_delete,
+    cmd_state_transition_list,
+)
 from .ticket import (
     cmd_ticket_comment,
     cmd_ticket_create,
@@ -194,6 +201,34 @@ def main() -> None:
 
     state_list = p_state_sub.add_parser("list", help="List all states")
     state_list.set_defaults(func=cmd_state_list)
+
+    state_add = p_state_sub.add_parser("add", help="Add a state")
+    state_add.add_argument("slug", help="State slug")
+    state_add.set_defaults(func=cmd_state_add)
+
+    state_delete = p_state_sub.add_parser("delete", help="Delete a state")
+    state_delete.add_argument("slug", help="State slug")
+    state_delete.set_defaults(func=cmd_state_delete)
+
+    state_trans = p_state_sub.add_parser(
+        "transition", help="State transition operations"
+    )
+    p_state_trans = state_trans.add_subparsers(
+        dest="state_transition_command", required=True
+    )
+
+    state_trans_list = p_state_trans.add_parser("list", help="List all transitions")
+    state_trans_list.set_defaults(func=cmd_state_transition_list)
+
+    state_trans_add = p_state_trans.add_parser("add", help="Add a transition")
+    state_trans_add.add_argument("from_slug", help="From state slug")
+    state_trans_add.add_argument("to_slug", help="To state slug")
+    state_trans_add.set_defaults(func=cmd_state_transition_add)
+
+    state_trans_delete = p_state_trans.add_parser("delete", help="Delete a transition")
+    state_trans_delete.add_argument("from_slug", help="From state slug")
+    state_trans_delete.add_argument("to_slug", help="To state slug")
+    state_trans_delete.set_defaults(func=cmd_state_transition_delete)
 
     # priority
     p_priority = subparsers.add_parser("priority", help="Priority operations")

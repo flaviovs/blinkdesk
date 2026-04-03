@@ -15,6 +15,13 @@ from blinkdesk import TicketingSystem, init_db
 from blinkdesk._mcp import create_mcp_server
 from blinkdesk.cli.db import cmd_db_get_journal_mode, cmd_db_set_journal_mode
 from blinkdesk.cli.entity import cmd_entity_add, cmd_entity_delete
+from blinkdesk.cli.state import (
+    cmd_state_add,
+    cmd_state_delete,
+    cmd_state_transition_add,
+    cmd_state_transition_delete,
+    cmd_state_transition_list,
+)
 from blinkdesk.cli.ticket import cmd_ticket_list, cmd_ticket_get
 from blinkdesk.init import seed_db_from_dict
 
@@ -348,6 +355,130 @@ class TestBlinkDesk(unittest.TestCase):
                 cmd_entity_delete(args)
         output = err.getvalue()
         self.assertIn("Cannot delete entity 'alice'", output)
+
+    def test_state_add(self) -> None:
+        data = {
+            "states": ["open", "closed"],
+        }
+        system = self._init_system(data)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            slug="pending",
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_state_add(args)
+        output = out.getvalue()
+        self.assertIn("State created: pending", output)
+
+        state = system.get_state_machine().get_state_by_slug("pending")
+        self.assertIsNotNone(state)
+        self.assertEqual(state.slug, "pending")
+
+    def test_state_delete_succeeds(self) -> None:
+        data = {
+            "states": ["open", "closed", "pending"],
+        }
+        system = self._init_system(data)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            slug="pending",
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_state_delete(args)
+        output = out.getvalue()
+        self.assertIn("State deleted: pending", output)
+
+        state = system.get_state_machine().get_state_by_slug("pending")
+        self.assertIsNone(state)
+
+    def test_state_delete_with_tickets_fails(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open", "closed"],
+            "transitions": [{"from": "open", "to": "closed"}],
+        }
+        system = self._init_system(data)
+        open_state = system.get_state_machine().get_state_by_slug("open")
+        assert open_state is not None
+        system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            slug="open",
+        )
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with redirect_stderr(err):
+                cmd_state_delete(args)
+        output = err.getvalue()
+        self.assertIn("Cannot delete state 'open'", output)
+
+    def test_state_transition_list(self) -> None:
+        data = {
+            "states": ["open", "pending", "closed"],
+            "transitions": [
+                {"from": "open", "to": "pending"},
+                {"from": "pending", "to": "closed"},
+            ],
+        }
+        system = self._init_system(data)
+
+        args = argparse.Namespace(database_path=self.db_path)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_state_transition_list(args)
+        output = out.getvalue()
+        self.assertIn("open -> pending", output)
+        self.assertIn("pending -> closed", output)
+
+    def test_state_transition_add(self) -> None:
+        data = {
+            "states": ["open", "closed"],
+        }
+        system = self._init_system(data)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            from_slug="open",
+            to_slug="closed",
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_state_transition_add(args)
+        output = out.getvalue()
+        self.assertIn("Transition added: open -> closed", output)
+
+        transitions = system.get_state_machine().get_all_transitions()
+        self.assertEqual(len(transitions), 1)
+
+    def test_state_transition_delete(self) -> None:
+        data = {
+            "states": ["open", "pending", "closed"],
+            "transitions": [
+                {"from": "open", "to": "pending"},
+                {"from": "pending", "to": "closed"},
+            ],
+        }
+        system = self._init_system(data)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            from_slug="open",
+            to_slug="pending",
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_state_transition_delete(args)
+        output = out.getvalue()
+        self.assertIn("Transition deleted: open -> pending", output)
+
+        transitions = system.get_state_machine().get_all_transitions()
+        self.assertEqual(len(transitions), 1)
+        self.assertEqual(transitions[0][1].slug, "closed")
 
     def test_close(self) -> None:
         data = {
@@ -868,6 +999,91 @@ class TestBlinkDesk(unittest.TestCase):
         ):
             mcp = create_mcp_server(self.db_path)
             self.assertEqual(captured_name, "BlinkDesk")
+
+    def test_delete_state_with_tickets_fails(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open", "closed"],
+        }
+        system = self._init_system(data)
+        system.create_ticket("Test")
+        open_state = system.get_state_machine().get_state_by_slug("open")
+        assert open_state is not None
+        result = system.get_state_machine().delete_state(open_state)
+        self.assertFalse(result)
+
+    def test_delete_state_without_tickets_succeeds(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open", "closed", "wontfix"],
+            "transitions": [
+                {"from": "open", "to": "closed"},
+                {"from": "open", "to": "wontfix"},
+            ],
+        }
+        system = self._init_system(data)
+        wontfix = system.get_state_machine().get_state_by_slug("wontfix")
+        assert wontfix is not None
+        result = system.get_state_machine().delete_state(wontfix)
+        self.assertTrue(result)
+        states = system.get_state_machine().get_all_states()
+        self.assertEqual(len(states), 2)
+        self.assertNotIn("wontfix", [s.slug for s in states])
+
+    def test_delete_state_removes_transitions(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open", "pending", "closed"],
+            "transitions": [
+                {"from": "open", "to": "pending"},
+                {"from": "pending", "to": "closed"},
+            ],
+        }
+        system = self._init_system(data)
+        pending = system.get_state_machine().get_state_by_slug("pending")
+        assert pending is not None
+        result = system.get_state_machine().delete_state(pending)
+        self.assertTrue(result)
+        transitions = system.get_state_machine().get_all_transitions()
+        self.assertEqual(len(transitions), 0)
+
+    def test_get_all_transitions(self) -> None:
+        data = {
+            "states": ["open", "pending", "closed"],
+            "transitions": [
+                {"from": "open", "to": "pending"},
+                {"from": "pending", "to": "closed"},
+            ],
+        }
+        system = self._init_system(data)
+        transitions = system.get_state_machine().get_all_transitions()
+        self.assertEqual(len(transitions), 2)
+        self.assertEqual(transitions[0][0].slug, "open")
+        self.assertEqual(transitions[0][1].slug, "pending")
+        self.assertEqual(transitions[1][0].slug, "pending")
+        self.assertEqual(transitions[1][1].slug, "closed")
+
+    def test_delete_transition(self) -> None:
+        data = {
+            "states": ["open", "pending", "closed"],
+            "transitions": [
+                {"from": "open", "to": "pending"},
+                {"from": "pending", "to": "closed"},
+            ],
+        }
+        system = self._init_system(data)
+        open_s = system.get_state_machine().get_state_by_slug("open")
+        pending_s = system.get_state_machine().get_state_by_slug("pending")
+        assert open_s is not None and pending_s is not None
+
+        result = system.get_state_machine().delete_transition(open_s, pending_s)
+        self.assertTrue(result)
+
+        transitions = system.get_state_machine().get_all_transitions()
+        self.assertEqual(len(transitions), 1)
+
+        result = system.get_state_machine().delete_transition(open_s, pending_s)
+        self.assertFalse(result)
 
 
 if __name__ == "__main__":
