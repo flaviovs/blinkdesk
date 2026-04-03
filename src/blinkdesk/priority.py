@@ -90,55 +90,86 @@ class TicketPriorityManager:
             return None
         return TicketPriority.from_row(row)
 
-    def create_priority(self, slug: str) -> TicketPriority:
+    def create_priority(self, slug: str, position: int) -> TicketPriority:
         """Create a new ticket priority.
 
         Args:
             slug: URL-friendly slug for the priority.
+            position: Position/order (higher number = higher priority/more urgent).
 
         Returns:
             The created TicketPriority.
 
         Raises:
-            ValueError: If a priority with the same slug already exists.
+            ValueError: If a priority with the same slug or position already exists.
         """
-        cursor = self._conn.execute(
-            "INSERT INTO ticket_priorities (slug) VALUES (?)",
-            (slug,),
+        existing = self.get_priority_by_slug(slug)
+        if existing is not None:
+            raise ValueError(f"Priority already exists: {slug}")
+
+        existing_pos = self.get_priority_by_id(position)
+        if existing_pos is not None:
+            raise ValueError(
+                f"Position {position} already in use by priority '{existing_pos.slug}'"
+            )
+
+        self._conn.execute(
+            "INSERT INTO ticket_priorities (priority_id, slug) VALUES (?, ?)",
+            (position, slug),
         )
         self._conn.commit()
-        last_id = cursor.lastrowid
-        if last_id is None:
-            raise ValueError("Failed to create priority")
-        return TicketPriority(priority_id=last_id, slug=slug)
+        return TicketPriority(priority_id=position, slug=slug)
 
-    def rename_priority(self, old_slug: str, new_slug: str) -> TicketPriority:
-        """Rename a priority's slug.
+    def rename_priority(
+        self, old_slug: str, new_slug: str, new_position: int | None = None
+    ) -> TicketPriority:
+        """Rename a priority's slug and optionally change its position.
 
         Args:
             old_slug: Current slug of the priority.
             new_slug: New slug for the priority.
+            new_position: New position/order (optional).
 
         Returns:
             The updated TicketPriority.
 
         Raises:
-            ValueError: If priority not found or new slug already exists.
+            ValueError: If priority not found, new slug already exists, or new position
+                is already in use.
         """
         priority = self.get_priority_by_slug(old_slug)
         if priority is None:
             raise ValueError(f"Priority not found: {old_slug}")
 
-        existing = self.get_priority_by_slug(new_slug)
-        if existing is not None:
-            raise ValueError(f"Priority already exists: {new_slug}")
+        if new_slug != old_slug:
+            existing = self.get_priority_by_slug(new_slug)
+            if existing is not None:
+                raise ValueError(f"Priority already exists: {new_slug}")
+
+        if new_position is not None and new_position != priority.priority_id:
+            existing_pos = self.get_priority_by_id(new_position)
+            if existing_pos is not None:
+                raise ValueError(
+                    f"Position {new_position} already in use by "
+                    f"priority '{existing_pos.slug}'"
+                )
 
         self._conn.execute(
-            "UPDATE ticket_priorities SET slug = ? WHERE priority_id = ?",
-            (new_slug, priority.priority_id),
+            "UPDATE ticket_priorities SET slug = ?, priority_id = ? "
+            "WHERE priority_id = ?",
+            (
+                new_slug,
+                new_position if new_position is not None else priority.priority_id,
+                priority.priority_id,
+            ),
         )
         self._conn.commit()
-        return TicketPriority(priority_id=priority.priority_id, slug=new_slug)
+        return TicketPriority(
+            priority_id=new_position
+            if new_position is not None
+            else priority.priority_id,
+            slug=new_slug,
+        )
 
     def delete_priority(self, priority: TicketPriority) -> bool:
         """Delete a priority if no tickets have this priority.
@@ -162,21 +193,3 @@ class TicketPriorityManager:
         )
         self._conn.commit()
         return True
-
-    def get_or_create_priority(self, slug: str) -> TicketPriority:
-        """Get a priority by slug or create it if it doesn't exist.
-
-        Args:
-            slug: URL-friendly slug for the priority.
-
-        Returns:
-            The existing or newly created TicketPriority.
-        """
-        cursor = self._conn.execute(
-            "SELECT priority_id, slug FROM ticket_priorities WHERE slug = ?",
-            (slug,),
-        )
-        row = cursor.fetchone()
-        if row is not None:
-            return TicketPriority.from_row(row)
-        return self.create_priority(slug)

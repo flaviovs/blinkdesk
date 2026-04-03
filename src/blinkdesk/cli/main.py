@@ -196,6 +196,9 @@ def main() -> None:
 
     priority_add = p_priority_sub.add_parser("add", help="Add a priority")
     priority_add.add_argument("slug", help="Priority slug")
+    priority_add.add_argument(
+        "position", help="Priority position (lower = higher priority)", type=int
+    )
     priority_add.set_defaults(func=cmd_priority_add)
 
     priority_delete = p_priority_sub.add_parser("delete", help="Delete a priority")
@@ -205,6 +208,9 @@ def main() -> None:
     priority_rename = p_priority_sub.add_parser("rename", help="Rename a priority")
     priority_rename.add_argument("old_slug", help="Current priority slug")
     priority_rename.add_argument("new_slug", help="New priority slug")
+    priority_rename.add_argument(
+        "--position", help="New priority position", type=int, default=None
+    )
     priority_rename.set_defaults(func=cmd_priority_rename)
 
     # mcp

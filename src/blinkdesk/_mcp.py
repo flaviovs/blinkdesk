@@ -341,14 +341,15 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             system.close()
 
     @mcp.tool()
-    def list_ticket_priorities() -> list[dict[str, Any]]:
+    def list_ticket_priorities() -> list[str]:
         """Use when you need to know valid priorities for issue tickets in the
-        ticket tracking system. Returns all possible priorities with their slugs."""
+        ticket tracking system. Returns all possible priority slugs ordered by
+        position (higher position = higher priority/more urgent)."""
         system = TicketingSystem(database_path)
         try:
             priority_manager = system.get_priority_machine()
             priorities = priority_manager.get_all_priorities()
-            return [{"id": p.priority_id, "slug": p.slug} for p in priorities]
+            return [p.slug for p in priorities]
         finally:
             system.close()
 

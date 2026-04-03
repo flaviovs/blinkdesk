@@ -171,10 +171,16 @@ def _seed_priorities(
     if not priorities:
         priorities = ["low", "normal", "high"]
 
-    for slug in priorities:
+    positions = (
+        [10, 20, 30]
+        if len(priorities) == 3
+        else list(range(10, 10 + len(priorities) * 10, 10))
+    )
+
+    for slug, pos in zip(priorities, positions):
         conn.execute(
-            "INSERT OR IGNORE INTO ticket_priorities (slug) VALUES (?)",
-            (slug,),
+            "INSERT OR IGNORE INTO ticket_priorities (priority_id, slug) VALUES (?, ?)",
+            (pos, slug),
         )
 
     cursor = conn.execute(

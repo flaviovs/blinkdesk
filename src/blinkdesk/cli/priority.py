@@ -27,8 +27,13 @@ def cmd_priority_add(args: argparse.Namespace) -> None:
     db_path = _get_database_path(args)
     system = TicketingSystem(db_path)
     try:
-        priority = system.get_priority_machine().create_priority(args.slug)
+        priority = system.get_priority_machine().create_priority(
+            args.slug, args.position
+        )
         print(f"Priority created: {priority.slug}")
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
     finally:
         system.close()
 
@@ -62,7 +67,7 @@ def cmd_priority_rename(args: argparse.Namespace) -> None:
     system = TicketingSystem(db_path)
     try:
         priority = system.get_priority_machine().rename_priority(
-            args.old_slug, args.new_slug
+            args.old_slug, args.new_slug, args.position
         )
         print(f"Priority renamed: {args.old_slug} -> {priority.slug}")
     except ValueError as e:
