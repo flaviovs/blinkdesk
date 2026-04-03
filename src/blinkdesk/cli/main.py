@@ -1,4 +1,4 @@
-"""Command-line interface for Blink Desk."""
+"""Command-line interface for BlinkDesk."""
 
 import argparse
 import logging
@@ -31,7 +31,7 @@ from .ticket import (
 
 def main() -> None:
     """Main entry point."""
-    parser = argparse.ArgumentParser(prog="bd", description="Blink Desk CLI")
+    parser = argparse.ArgumentParser(prog="bd", description="BlinkDesk CLI")
     parser.add_argument(
         "-v",
         "--verbose",

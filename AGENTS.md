@@ -1,4 +1,4 @@
-# Blink Desk - Agent Guidelines
+# BlinkDesk - Agent Guidelines
 
 Lightweight ticketing system using SQLite with Python stdlib only. Follows Semantic Versioning 2.0.0.
 

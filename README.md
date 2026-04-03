@@ -1,4 +1,4 @@
-Blink Desk
+BlinkDesk
 ==========
 
 A lightweight ticketing system for agent orchestration, developers, and command-line workflows. Uses SQLite with Python stdlib only.
@@ -109,7 +109,7 @@ pip install -e ".[dev]"
 Python API
 ==========
 
-Blink Desk provides a clear API for Python applications to access the ticketing system.
+BlinkDesk provides a clear API for Python applications to access the ticketing system.
 
 TicketingSystem
 ---------------
@@ -189,7 +189,7 @@ That's the basics. Check the code if you need more detail.
 MCP Integration
 ===============
 
-Blink Desk's MCP server lets you connect AI assistant with the ticketing directly.
+BlinkDesk's MCP server lets you connect AI assistant with the ticketing directly.
 
 Setup
 -----
@@ -296,7 +296,7 @@ The server exposes these as proper MCP tools - your agent can discover and use t
 CLI Reference
 =============
 
-Blink Desk provides the `bd` command. Use `-d` to specify your database, or set `BLINKDESK_DATABASE`.
+BlinkDesk provides the `bd` command. Use `-d` to specify your database, or set `BLINKDESK_DATABASE`.
 
 Basics
 ------
@@ -315,7 +315,7 @@ Run `bd --help` or `bd <command> --help` for all available options.
 Database Maintenance
 --------------------
 
-Blink Desk supports SQLite auto-vacuum configuration through the CLI:
+BlinkDesk supports SQLite auto-vacuum configuration through the CLI:
 
 ```bash
 # Read current auto-vacuum mode
@@ -335,14 +335,14 @@ Notes:
 
 - New databases created with `bd init` default to `auto_vacuum = incremental`.
 - This default is applied only when creating a fresh database file; existing databases are not changed.
-- On `TicketingSystem.close()`, Blink Desk runs `PRAGMA main.incremental_vacuum` with 1% probability.
+- On `TicketingSystem.close()`, BlinkDesk runs `PRAGMA main.incremental_vacuum` with 1% probability.
 
 ---
 
 Schema Definition
 =================
 
-Blink Desk uses TOML files to set up your database with the states, entities, and workflow rules you want.
+BlinkDesk uses TOML files to set up your database with the states, entities, and workflow rules you want.
 
 You define your states and entities once at setup time. This keeps the database schema simple and lets you model whatever workflow you need - simple bug tracking, full Kanban, support tickets, personal tasks.
 

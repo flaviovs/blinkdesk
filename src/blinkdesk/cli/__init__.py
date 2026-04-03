@@ -1,1 +1,1 @@
-"""Command-line interface for Blink Desk."""
+"""Command-line interface for BlinkDesk."""

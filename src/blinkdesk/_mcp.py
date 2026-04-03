@@ -1,4 +1,4 @@
-"""MCP server implementation for Blink Desk."""
+"""MCP server implementation for BlinkDesk."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 def create_mcp_server(database_path: str) -> "FastMCP":
-    """Create an MCP server with Blink Desk tools.
+    """Create an MCP server with BlinkDesk tools.
 
     Args:
         database_path: Path to the SQLite database.
@@ -21,7 +21,7 @@ def create_mcp_server(database_path: str) -> "FastMCP":
     """
     from mcp.server.fastmcp import FastMCP
 
-    mcp = FastMCP("Blink Desk", json_response=True)
+    mcp = FastMCP("BlinkDesk", json_response=True)
 
     @mcp.tool()
     def find_tickets(

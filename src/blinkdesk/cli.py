@@ -1,4 +1,4 @@
-"""Command-line interface for Blink Desk (compatibility shim)."""
+"""Command-line interface for BlinkDesk (compatibility shim)."""
 
 from blinkdesk.cli import main
 
