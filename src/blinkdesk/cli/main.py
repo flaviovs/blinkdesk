@@ -267,7 +267,10 @@ def main() -> None:
         format="%(name)s: %(message)s",
     )
 
-    args.func(args)
+    try:
+        args.func(args)
+    except ValueError as e:
+        parser.error(str(e))
 
 
 if __name__ == "__main__":

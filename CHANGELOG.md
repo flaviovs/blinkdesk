@@ -28,6 +28,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 ### Fixed
 
 - `default_priority` now properly stored in config table (moved to `[options]` section)
+- CLI now shows friendly error message when no database is specified (instead of stack trace)
 - `bd config set` now validates that `default_priority` value is a valid priority slug
 
 ### Changed
