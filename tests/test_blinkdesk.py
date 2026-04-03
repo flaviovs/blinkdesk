@@ -11,6 +11,7 @@ from contextlib import redirect_stdout, redirect_stderr
 from unittest.mock import patch
 from typing import Any
 
+import blinkdesk.migrate as migrate_module
 from blinkdesk import TicketingSystem, init_db
 from blinkdesk._mcp import create_mcp_server
 from blinkdesk.cli.db import cmd_db_get_journal_mode, cmd_db_set_journal_mode
@@ -1084,6 +1085,101 @@ class TestBlinkDesk(unittest.TestCase):
 
         result = system.get_state_machine().delete_transition(open_s, pending_s)
         self.assertFalse(result)
+
+    def test_create_ticket_rolls_back_when_log_fails(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        with patch.object(system, "_log_ticket", side_effect=RuntimeError("boom")):
+            with self.assertRaises(RuntimeError):
+                system.create_ticket("Will rollback")
+
+        self.assertEqual(system.list_tickets(), [])
+
+    def test_update_ticket_rolls_back_when_log_fails(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Old title")
+
+        with patch.object(system, "_log_ticket", side_effect=RuntimeError("boom")):
+            with self.assertRaises(RuntimeError):
+                system.update_ticket(ticket, "New title")
+
+        fetched = system.get_ticket(ticket.id)
+        assert fetched is not None
+        self.assertEqual(fetched.title, "Old title")
+
+    def test_add_comment_transition_rolls_back_on_failure(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open", "closed"],
+            "transitions": [
+                {"from": "open", "to": "closed"},
+            ],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        closed = system.get_state_machine().get_state_by_slug("closed")
+        assert entity is not None
+        assert closed is not None
+
+        ticket = system.create_ticket("Test")
+        with patch.object(system, "_log_ticket", side_effect=RuntimeError("boom")):
+            with self.assertRaises(RuntimeError):
+                system.add_comment(ticket, entity, "Closing ticket", new_state=closed)
+
+        refreshed = system.get_ticket(ticket.id)
+        assert refreshed is not None
+        self.assertEqual(refreshed.state.slug, "open")
+        self.assertEqual(system.get_ticket_comments(ticket), [])
+
+    def test_seed_db_from_dict_rolls_back_on_error(self) -> None:
+        init_db(self.db_path)
+
+        with self.assertRaises(ValueError):
+            seed_db_from_dict(
+                self.db_path,
+                {
+                    "entities": ["alice"],
+                    "states": ["open"],
+                    "options": {"default_priority": "urgent"},
+                },
+            )
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            entities = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
+            states = conn.execute("SELECT COUNT(*) FROM ticket_states").fetchone()[0]
+            self.assertEqual(entities, 0)
+            self.assertEqual(states, 0)
+        finally:
+            conn.close()
+
+    def test_migration_step_rolls_back_on_error(self) -> None:
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            conn.execute("PRAGMA user_version = 0")
+            conn.execute("CREATE TABLE migration_probe (id INTEGER PRIMARY KEY)")
+
+            def bad_migration(connection: sqlite3.Connection) -> None:
+                connection.execute("INSERT INTO migration_probe (id) VALUES (1)")
+                raise RuntimeError("broken migration")
+
+            with patch.object(migrate_module, "MIGRATIONS", [(0, bad_migration)]):
+                with self.assertRaises(RuntimeError):
+                    migrate_module.run_migrations(conn)
+
+            row = conn.execute("SELECT id FROM migration_probe WHERE id = 1").fetchone()
+            self.assertIsNone(row)
+            user_version = conn.execute("PRAGMA user_version").fetchone()[0]
+            self.assertEqual(user_version, 0)
+        finally:
+            conn.close()
 
 
 if __name__ == "__main__":

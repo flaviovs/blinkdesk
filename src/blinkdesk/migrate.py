@@ -51,14 +51,12 @@ def _migrate_v0_to_v1(conn: sqlite3.Connection) -> None:
         "SELECT priority_id FROM ticket_priorities WHERE slug = ?)",
         (default_slug,),
     )
-    conn.commit()
 
 
 def _migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
     """Migrate from schema v1 to v2: remove name columns from entities."""
     conn.execute("ALTER TABLE entities DROP COLUMN name")
     conn.execute("ALTER TABLE ticket_states DROP COLUMN name")
-    conn.commit()
 
 
 MIGRATIONS = [
@@ -87,6 +85,7 @@ def run_migrations(conn: sqlite3.Connection) -> None:
 
     for from_ver, migrate_fn in MIGRATIONS:
         if from_ver >= db_version:
-            migrate_fn(conn)
-            db_version = from_ver + 1
-            set_schema_version(conn, db_version)
+            with conn:
+                migrate_fn(conn)
+                db_version = from_ver + 1
+                set_schema_version(conn, db_version)

@@ -71,11 +71,11 @@ class TicketingSystem:
         Returns:
             The created Entity.
         """
-        cursor = self._conn.execute(
-            "INSERT INTO entities (slug) VALUES (?)",
-            (slug,),
-        )
-        self._conn.commit()
+        with self._conn:
+            cursor = self._conn.execute(
+                "INSERT INTO entities (slug) VALUES (?)",
+                (slug,),
+            )
         last_id = cursor.lastrowid
         if last_id is None:
             raise ValueError("Failed to create entity")
@@ -141,17 +141,17 @@ class TicketingSystem:
         Returns:
             True if deleted, False if entity is assigned to tickets.
         """
-        cursor = self._conn.execute(
-            "SELECT COUNT(*) FROM tickets WHERE assignee_entity_id = ?",
-            (entity.entity_id,),
-        )
-        count = cursor.fetchone()[0]
-        if count > 0:
-            return False
-        self._conn.execute(
-            "DELETE FROM entities WHERE entity_id = ?", (entity.entity_id,)
-        )
-        self._conn.commit()
+        with self._conn:
+            cursor = self._conn.execute(
+                "SELECT COUNT(*) FROM tickets WHERE assignee_entity_id = ?",
+                (entity.entity_id,),
+            )
+            count = cursor.fetchone()[0]
+            if count > 0:
+                return False
+            self._conn.execute(
+                "DELETE FROM entities WHERE entity_id = ?", (entity.entity_id,)
+            )
         logger.info("Deleted entity: %s", entity.slug)
         return True
 
@@ -193,7 +193,6 @@ class TicketingSystem:
                 now,
             ),
         )
-        self._conn.commit()
 
     def create_ticket(
         self,
@@ -225,28 +224,28 @@ class TicketingSystem:
 
         initial_state = states[0]
         now = datetime.now(timezone.utc).isoformat()
-        cursor = self._conn.execute(
-            """
-            INSERT INTO tickets (
-                title, description, state_id, priority_id,
-                assignee_entity_id, created_at, updated_at
+        with self._conn:
+            cursor = self._conn.execute(
+                """
+                INSERT INTO tickets (
+                    title, description, state_id, priority_id,
+                    assignee_entity_id, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, NULL, ?, ?)
+                """,
+                (
+                    title,
+                    description,
+                    initial_state.state_id,
+                    priority.priority_id,
+                    now,
+                    now,
+                ),
             )
-            VALUES (?, ?, ?, ?, NULL, ?, ?)
-            """,
-            (
-                title,
-                description,
-                initial_state.state_id,
-                priority.priority_id,
-                now,
-                now,
-            ),
-        )
-        self._conn.commit()
-        last_id = cursor.lastrowid
-        if last_id is None:
-            raise ValueError("Failed to create ticket")
-        self._log_ticket(last_id, TicketLogAction.CREATED)
+            last_id = cursor.lastrowid
+            if last_id is None:
+                raise ValueError("Failed to create ticket")
+            self._log_ticket(last_id, TicketLogAction.CREATED)
         logger.info("Created ticket #%d: %s", last_id, title)
         return Ticket(
             id=last_id,
@@ -323,19 +322,19 @@ class TicketingSystem:
             logger.warning("Ticket #%d title unchanged (same as current)", ticket.id)
             return ticket
         now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            """
-            UPDATE tickets SET title = ?, updated_at = ?
-            WHERE ticket_id = ?
-            """,
-            (title, now, ticket.id),
-        )
-        self._conn.commit()
-        self._log_ticket(
-            ticket.id,
-            TicketLogAction.UPDATED,
-            details=f"title changed from '{ticket.title}' to '{title}'",
-        )
+        with self._conn:
+            self._conn.execute(
+                """
+                UPDATE tickets SET title = ?, updated_at = ?
+                WHERE ticket_id = ?
+                """,
+                (title, now, ticket.id),
+            )
+            self._log_ticket(
+                ticket.id,
+                TicketLogAction.UPDATED,
+                details=f"title changed from '{ticket.title}' to '{title}'",
+            )
         logger.info("Updated ticket #%d", ticket.id)
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
@@ -350,19 +349,19 @@ class TicketingSystem:
             The updated Ticket.
         """
         now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            """
-            UPDATE tickets SET priority_id = ?, updated_at = ?
-            WHERE ticket_id = ?
-            """,
-            (priority.priority_id, now, ticket.id),
-        )
-        self._conn.commit()
-        self._log_ticket(
-            ticket.id,
-            TicketLogAction.UPDATED,
-            details=f"priority changed to {priority.slug}",
-        )
+        with self._conn:
+            self._conn.execute(
+                """
+                UPDATE tickets SET priority_id = ?, updated_at = ?
+                WHERE ticket_id = ?
+                """,
+                (priority.priority_id, now, ticket.id),
+            )
+            self._log_ticket(
+                ticket.id,
+                TicketLogAction.UPDATED,
+                details=f"priority changed to {priority.slug}",
+            )
         logger.info("Set priority of ticket #%d to %s", ticket.id, priority.slug)
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
@@ -377,17 +376,20 @@ class TicketingSystem:
             The updated Ticket.
         """
         now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            """
-            UPDATE tickets SET assignee_entity_id = ?, updated_at = ?
-            WHERE ticket_id = ?
-            """,
-            (entity.entity_id, now, ticket.id),
-        )
-        self._conn.commit()
-        self._log_ticket(
-            ticket.id, TicketLogAction.ASSIGNED, entity, f"assigned to {entity.slug}"
-        )
+        with self._conn:
+            self._conn.execute(
+                """
+                UPDATE tickets SET assignee_entity_id = ?, updated_at = ?
+                WHERE ticket_id = ?
+                """,
+                (entity.entity_id, now, ticket.id),
+            )
+            self._log_ticket(
+                ticket.id,
+                TicketLogAction.ASSIGNED,
+                entity,
+                f"assigned to {entity.slug}",
+            )
         logger.info("Assigned ticket #%d to %s", ticket.id, entity.slug)
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
@@ -401,31 +403,24 @@ class TicketingSystem:
             The updated Ticket.
         """
         now = datetime.now(timezone.utc).isoformat()
-        self._conn.execute(
-            """
-            UPDATE tickets SET assignee_entity_id = NULL, updated_at = ?
-            WHERE ticket_id = ?
-            """,
-            (now, ticket.id),
-        )
-        self._conn.commit()
-        self._log_ticket(ticket.id, TicketLogAction.UNASSIGNED)
+        with self._conn:
+            self._conn.execute(
+                """
+                UPDATE tickets SET assignee_entity_id = NULL, updated_at = ?
+                WHERE ticket_id = ?
+                """,
+                (now, ticket.id),
+            )
+            self._log_ticket(ticket.id, TicketLogAction.UNASSIGNED)
         logger.info("Unassigned ticket #%d", ticket.id)
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
-    def transition_ticket(self, ticket: Ticket, new_state: TicketState) -> Ticket:
-        """Transition a ticket to a new state.
-
-        Args:
-            ticket: Ticket to transition.
-            new_state: Target state.
-
-        Returns:
-            The updated Ticket.
-
-        Raises:
-            ValueError: If the transition is not allowed.
-        """
+    def _transition_ticket_no_commit(
+        self,
+        ticket: Ticket,
+        new_state: TicketState,
+    ) -> None:
+        """Transition a ticket to a new state without committing."""
         allowed = self._state_machine.get_allowed_transitions(ticket.state)
         if new_state not in allowed:
             logger.warning(
@@ -445,12 +440,27 @@ class TicketingSystem:
             """,
             (new_state.state_id, now, ticket.id),
         )
-        self._conn.commit()
         self._log_ticket(
             ticket.id,
             TicketLogAction.STATE_CHANGED,
             details=f"{ticket.state.slug} -> {new_state.slug}",
         )
+
+    def transition_ticket(self, ticket: Ticket, new_state: TicketState) -> Ticket:
+        """Transition a ticket to a new state.
+
+        Args:
+            ticket: Ticket to transition.
+            new_state: Target state.
+
+        Returns:
+            The updated Ticket.
+
+        Raises:
+            ValueError: If the transition is not allowed.
+        """
+        with self._conn:
+            self._transition_ticket_no_commit(ticket, new_state)
         logger.info(
             "Transitioned ticket #%d: %s -> %s",
             ticket.id,
@@ -511,32 +521,33 @@ class TicketingSystem:
         Returns:
             The updated Ticket.
         """
-        if new_state is not None:
-            self.transition_ticket(ticket, new_state)
+        with self._conn:
+            if new_state is not None:
+                self._transition_ticket_no_commit(ticket, new_state)
 
-        now = datetime.now(timezone.utc).isoformat()
-        cursor = self._conn.execute(
-            "SELECT COALESCE(MAX(comment_id), 0) + 1 FROM comments WHERE ticket_id = ?",
-            (ticket.id,),
-        )
-        comment_id = cursor.fetchone()[0]
-        self._conn.execute(
-            """
-            INSERT INTO comments (
-                ticket_id, comment_id, entity_id, comment, new_state_id, created_at
+            now = datetime.now(timezone.utc).isoformat()
+            cursor = self._conn.execute(
+                "SELECT COALESCE(MAX(comment_id), 0) + 1 "
+                "FROM comments WHERE ticket_id = ?",
+                (ticket.id,),
             )
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                ticket.id,
-                comment_id,
-                entity.entity_id,
-                comment,
-                new_state.state_id if new_state else None,
-                now,
-            ),
-        )
-        self._conn.commit()
+            comment_id = cursor.fetchone()[0]
+            self._conn.execute(
+                """
+                INSERT INTO comments (
+                    ticket_id, comment_id, entity_id, comment, new_state_id, created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    ticket.id,
+                    comment_id,
+                    entity.entity_id,
+                    comment,
+                    new_state.state_id if new_state else None,
+                    now,
+                ),
+            )
         logger.info("Added comment to ticket #%d", ticket.id)
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
@@ -653,11 +664,11 @@ class TicketingSystem:
             key: Config key.
             value: Config value.
         """
-        self._conn.execute(
-            "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
-            (key, value),
-        )
-        self._conn.commit()
+        with self._conn:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+                (key, value),
+            )
 
     @property
     def lock_entities(self) -> bool:

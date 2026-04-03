@@ -83,18 +83,19 @@ def seed_db(db_path: str, config_path: str) -> None:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
-        entities = config.get("entities", [])
-        states = config.get("states", [])
-        _seed_entities(conn, entities)
-        _seed_states(conn, states)
-        _seed_priorities(
-            conn,
-            config.get("priorities", []),
-            config.get("options", {}).get("default_priority", "normal"),
-        )
-        _seed_transitions(conn, config.get("transitions", []))
-        _seed_options(conn, config.get("options", {}))
-        set_schema_version(conn, CURRENT_SCHEMA_VERSION)
+        with conn:
+            entities = config.get("entities", [])
+            states = config.get("states", [])
+            _seed_entities(conn, entities)
+            _seed_states(conn, states)
+            _seed_priorities(
+                conn,
+                config.get("priorities", []),
+                config.get("options", {}).get("default_priority", "normal"),
+            )
+            _seed_transitions(conn, config.get("transitions", []))
+            _seed_options(conn, config.get("options", {}))
+            set_schema_version(conn, CURRENT_SCHEMA_VERSION)
     finally:
         conn.close()
 
@@ -114,16 +115,17 @@ def seed_db_from_dict(db_path: str, data: dict[str, Any]) -> None:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
-        _seed_entities(conn, data.get("entities", []))
-        _seed_states(conn, data.get("states", []))
-        _seed_priorities(
-            conn,
-            data.get("priorities", []),
-            data.get("options", {}).get("default_priority", "normal"),
-        )
-        _seed_transitions(conn, data.get("transitions", []))
-        _seed_options(conn, data.get("options", {}))
-        set_schema_version(conn, CURRENT_SCHEMA_VERSION)
+        with conn:
+            _seed_entities(conn, data.get("entities", []))
+            _seed_states(conn, data.get("states", []))
+            _seed_priorities(
+                conn,
+                data.get("priorities", []),
+                data.get("options", {}).get("default_priority", "normal"),
+            )
+            _seed_transitions(conn, data.get("transitions", []))
+            _seed_options(conn, data.get("options", {}))
+            set_schema_version(conn, CURRENT_SCHEMA_VERSION)
     finally:
         conn.close()
 
@@ -140,7 +142,6 @@ def _seed_entities(conn: sqlite3.Connection, entities: list[str]) -> None:
             "INSERT INTO entities (slug) VALUES (?)",
             (slug,),
         )
-    conn.commit()
 
 
 def _seed_states(conn: sqlite3.Connection, states: list[str]) -> None:
@@ -155,7 +156,6 @@ def _seed_states(conn: sqlite3.Connection, states: list[str]) -> None:
             "INSERT INTO ticket_states (slug) VALUES (?)",
             (slug,),
         )
-    conn.commit()
 
 
 def _seed_priorities(
@@ -190,8 +190,6 @@ def _seed_priorities(
     row = cursor.fetchone()
     if row is None:
         raise ValueError(f"Default priority '{default_priority}' not found")
-
-    conn.commit()
 
 
 def _seed_transitions(
@@ -230,7 +228,6 @@ def _seed_transitions(
             "(from_state_id, to_state_id) VALUES (?, ?)",
             (from_id, to_id),
         )
-    conn.commit()
 
 
 def _seed_options(conn: sqlite3.Connection, options: dict[str, Any]) -> None:
@@ -255,8 +252,6 @@ def _seed_options(conn: sqlite3.Connection, options: dict[str, Any]) -> None:
             "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
             ("display_prefix", "#"),
         )
-
-    conn.commit()
 
 
 def get_config(db_path: str, key: str) -> str | None:
@@ -288,10 +283,10 @@ def set_config(db_path: str, key: str, value: str) -> None:
     """
     conn = sqlite3.connect(db_path)
     try:
-        conn.execute(
-            "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
-            (key, value),
-        )
-        conn.commit()
+        with conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+                (key, value),
+            )
     finally:
         conn.close()

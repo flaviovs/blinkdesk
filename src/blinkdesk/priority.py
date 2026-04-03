@@ -113,11 +113,11 @@ class TicketPriorityManager:
                 f"Position {position} already in use by priority '{existing_pos.slug}'"
             )
 
-        self._conn.execute(
-            "INSERT INTO ticket_priorities (priority_id, slug) VALUES (?, ?)",
-            (position, slug),
-        )
-        self._conn.commit()
+        with self._conn:
+            self._conn.execute(
+                "INSERT INTO ticket_priorities (priority_id, slug) VALUES (?, ?)",
+                (position, slug),
+            )
         return TicketPriority(priority_id=position, slug=slug)
 
     def rename_priority(
@@ -154,16 +154,16 @@ class TicketPriorityManager:
                     f"priority '{existing_pos.slug}'"
                 )
 
-        self._conn.execute(
-            "UPDATE ticket_priorities SET slug = ?, priority_id = ? "
-            "WHERE priority_id = ?",
-            (
-                new_slug,
-                new_position if new_position is not None else priority.priority_id,
-                priority.priority_id,
-            ),
-        )
-        self._conn.commit()
+        with self._conn:
+            self._conn.execute(
+                "UPDATE ticket_priorities SET slug = ?, priority_id = ? "
+                "WHERE priority_id = ?",
+                (
+                    new_slug,
+                    new_position if new_position is not None else priority.priority_id,
+                    priority.priority_id,
+                ),
+            )
         return TicketPriority(
             priority_id=new_position
             if new_position is not None
@@ -180,16 +180,16 @@ class TicketPriorityManager:
         Returns:
             True if deleted, False if tickets exist with this priority.
         """
-        cursor = self._conn.execute(
-            "SELECT COUNT(*) FROM tickets WHERE priority_id = ?",
-            (priority.priority_id,),
-        )
-        count = cursor.fetchone()[0]
-        if count > 0:
-            return False
-        self._conn.execute(
-            "DELETE FROM ticket_priorities WHERE priority_id = ?",
-            (priority.priority_id,),
-        )
-        self._conn.commit()
+        with self._conn:
+            cursor = self._conn.execute(
+                "SELECT COUNT(*) FROM tickets WHERE priority_id = ?",
+                (priority.priority_id,),
+            )
+            count = cursor.fetchone()[0]
+            if count > 0:
+                return False
+            self._conn.execute(
+                "DELETE FROM ticket_priorities WHERE priority_id = ?",
+                (priority.priority_id,),
+            )
         return True

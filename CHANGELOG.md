@@ -17,6 +17,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 ### Fixed
 
 - Fix example.schema.toml parsing issue where all keys were incorrectly placed under `[options]` section
+- Make Python API write operations atomic by using single-transaction boundaries for ticket/system updates, seeding, and migration steps
 
 ### Added
 

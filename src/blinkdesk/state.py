@@ -76,11 +76,11 @@ class TicketStateMachine:
         Returns:
             The created TicketState.
         """
-        cursor = self._conn.execute(
-            "INSERT INTO ticket_states (slug) VALUES (?)",
-            (slug,),
-        )
-        self._conn.commit()
+        with self._conn:
+            cursor = self._conn.execute(
+                "INSERT INTO ticket_states (slug) VALUES (?)",
+                (slug,),
+            )
         last_id = cursor.lastrowid
         if last_id is None:
             raise ValueError("Failed to create state")
@@ -113,14 +113,14 @@ class TicketStateMachine:
             from_state: The source state.
             to_state: The destination state.
         """
-        self._conn.execute(
-            """
-            INSERT OR IGNORE INTO state_transitions (from_state_id, to_state_id)
-            VALUES (?, ?)
-            """,
-            (from_state.state_id, to_state.state_id),
-        )
-        self._conn.commit()
+        with self._conn:
+            self._conn.execute(
+                """
+                INSERT OR IGNORE INTO state_transitions (from_state_id, to_state_id)
+                VALUES (?, ?)
+                """,
+                (from_state.state_id, to_state.state_id),
+            )
 
     def get_or_create_state(self, slug: str) -> TicketState:
         """Get a state by slug or create it if it doesn't exist.
@@ -173,11 +173,12 @@ class TicketStateMachine:
         Returns:
             True if deleted, False if not found.
         """
-        cursor = self._conn.execute(
-            "DELETE FROM state_transitions WHERE from_state_id = ? AND to_state_id = ?",
-            (from_state.state_id, to_state.state_id),
-        )
-        self._conn.commit()
+        with self._conn:
+            cursor = self._conn.execute(
+                "DELETE FROM state_transitions "
+                "WHERE from_state_id = ? AND to_state_id = ?",
+                (from_state.state_id, to_state.state_id),
+            )
         return cursor.rowcount > 0
 
     def delete_state(self, state: TicketState) -> bool:
@@ -189,20 +190,21 @@ class TicketStateMachine:
         Returns:
             True if deleted, False if tickets exist with this state.
         """
-        cursor = self._conn.execute(
-            "SELECT COUNT(*) FROM tickets WHERE state_id = ?",
-            (state.state_id,),
-        )
-        count = cursor.fetchone()[0]
-        if count > 0:
-            return False
-        self._conn.execute(
-            "DELETE FROM state_transitions WHERE from_state_id = ? OR to_state_id = ?",
-            (state.state_id, state.state_id),
-        )
-        self._conn.execute(
-            "DELETE FROM ticket_states WHERE state_id = ?",
-            (state.state_id,),
-        )
-        self._conn.commit()
+        with self._conn:
+            cursor = self._conn.execute(
+                "SELECT COUNT(*) FROM tickets WHERE state_id = ?",
+                (state.state_id,),
+            )
+            count = cursor.fetchone()[0]
+            if count > 0:
+                return False
+            self._conn.execute(
+                "DELETE FROM state_transitions "
+                "WHERE from_state_id = ? OR to_state_id = ?",
+                (state.state_id, state.state_id),
+            )
+            self._conn.execute(
+                "DELETE FROM ticket_states WHERE state_id = ?",
+                (state.state_id,),
+            )
         return True
