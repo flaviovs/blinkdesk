@@ -19,6 +19,12 @@ from .db import (
 )
 from .entity import cmd_entity_list
 from .mcp import add_mcp_subparser
+from .priority import (
+    cmd_priority_add,
+    cmd_priority_delete,
+    cmd_priority_list,
+    cmd_priority_rename,
+)
 from .state import cmd_state_list
 from .ticket import (
     cmd_ticket_comment,
@@ -53,6 +59,9 @@ def main() -> None:
     create = p_create_sub.add_parser("create", help="Create a ticket")
     create.add_argument("--title", required=True, help="Ticket title")
     create.add_argument("--description", help="Ticket description")
+    create.add_argument(
+        "--priority", default="normal", help="Priority slug (default: normal)"
+    )
     create.set_defaults(func=cmd_ticket_create)
 
     # ticket update
@@ -68,6 +77,7 @@ def main() -> None:
     )
     lst.add_argument("-s", "--state", help="Filter by state slug (e.g., open, closed)")
     lst.add_argument("-a", "--assignee", help="Filter by assignee slug")
+    lst.add_argument("-p", "--priority", help="Filter by priority slug")
     lst.add_argument(
         "--slug", action="store_true", help="Show slug instead of name in table output"
     )
@@ -182,6 +192,26 @@ def main() -> None:
 
     state_list = p_state_sub.add_parser("list", help="List all states")
     state_list.set_defaults(func=cmd_state_list)
+
+    # priority
+    p_priority = subparsers.add_parser("priority", help="Priority operations")
+    p_priority_sub = p_priority.add_subparsers(dest="priority_command", required=True)
+
+    priority_list = p_priority_sub.add_parser("list", help="List all priorities")
+    priority_list.set_defaults(func=cmd_priority_list)
+
+    priority_add = p_priority_sub.add_parser("add", help="Add a priority")
+    priority_add.add_argument("slug", help="Priority slug")
+    priority_add.set_defaults(func=cmd_priority_add)
+
+    priority_delete = p_priority_sub.add_parser("delete", help="Delete a priority")
+    priority_delete.add_argument("slug", help="Priority slug")
+    priority_delete.set_defaults(func=cmd_priority_delete)
+
+    priority_rename = p_priority_sub.add_parser("rename", help="Rename a priority")
+    priority_rename.add_argument("old_slug", help="Current priority slug")
+    priority_rename.add_argument("new_slug", help="New priority slug")
+    priority_rename.set_defaults(func=cmd_priority_rename)
 
     # mcp
     add_mcp_subparser(subparsers)

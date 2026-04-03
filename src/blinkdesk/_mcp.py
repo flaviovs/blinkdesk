@@ -28,18 +28,20 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
     def find_tickets(
         state: str | None = None,
         assignee: str | None = None,
+        order: str = "id-asc",
         limit: int = 50,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
         """Use when searching for issue tickets matching specific criteria in the
         ticket tracking system. Returns paginated list of ticket summaries
-        (id, title, state, assignee). Filter by state slug or assignee slug."""
+        (id, title, state, priority, assignee). Filter by state slug or assignee slug.
+        Sort by 'id-asc', 'id-desc', 'priority-asc', or 'priority-desc' (default:
+        id-asc, which sorts by creation time)."""
         system = TicketingSystem(database_path)
         try:
             tickets = system.list_tickets()
 
-            result = []
-            count = 0
+            result: list[dict[str, Any]] = []
             for ticket in tickets:
                 if state and ticket.state.slug != state:
                     continue
@@ -47,20 +49,30 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                     ticket.assignee is None or ticket.assignee.slug != assignee
                 ):
                     continue
+                result.append(
+                    {
+                        "id": ticket.id,
+                        "title": ticket.title,
+                        "state": ticket.state.slug,
+                        "priority": ticket.priority.slug,
+                        "assignee": ticket.assignee.slug if ticket.assignee else None,
+                        "_priority_order": ticket.priority.priority_id,
+                    }
+                )
 
-                if count >= offset and count < offset + limit:
-                    result.append(
-                        {
-                            "id": ticket.id,
-                            "title": ticket.title,
-                            "state": ticket.state.slug,
-                            "assignee": ticket.assignee.slug
-                            if ticket.assignee
-                            else None,
-                        }
-                    )
-                count += 1
-            return result
+            if order == "id-desc":
+                result.sort(key=lambda x: x["id"], reverse=True)
+            elif order == "priority-asc":
+                result.sort(key=lambda x: int(x["_priority_order"]))
+            elif order == "priority-desc":
+                result.sort(key=lambda x: int(x["_priority_order"]), reverse=True)
+            else:
+                result.sort(key=lambda x: x["id"])
+
+            for r in result:
+                del r["_priority_order"]
+
+            return result[offset : offset + limit]
         finally:
             system.close()
 
@@ -68,7 +80,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
     def get_ticket_details(ticket_id: int) -> dict[str, Any] | None:
         """Use when you need full details of a specific issue ticket by its ID in
         the ticket tracking system. Returns title, description, current state,
-        assignee, and timestamps. Returns null if not found."""
+        priority, assignee, and timestamps. Returns null if not found."""
         system = TicketingSystem(database_path)
         try:
             ticket = system.get_ticket(ticket_id)
@@ -79,6 +91,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 "title": ticket.title,
                 "description": ticket.description,
                 "state": ticket.state.slug,
+                "priority": ticket.priority.slug,
                 "assignee": ticket.assignee.slug if ticket.assignee else None,
                 "created_at": ticket.created_at.isoformat(),
                 "updated_at": ticket.updated_at.isoformat(),
@@ -87,18 +100,26 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             system.close()
 
     @mcp.tool()
-    def create_ticket(title: str, description: str | None = None) -> dict[str, Any]:
+    def create_ticket(
+        title: str, description: str | None = None, priority: str = "normal"
+    ) -> dict[str, Any]:
         """Use when creating a new issue ticket in the ticket tracking system.
-        Title is required, description optional. New tickets start in 'open' state
-        with no assignee. Returns the created ticket with ID."""
+        Title is required, description optional. Priority defaults to 'normal'.
+        New tickets start in 'open' state with no assignee. Returns the created
+        ticket with ID."""
         system = TicketingSystem(database_path)
         try:
-            ticket = system.create_ticket(title, description)
+            priority_obj = system.get_priority_machine().get_priority_by_slug(priority)
+            if priority_obj is None:
+                raise ValueError(f"Unknown priority: {priority}")
+
+            ticket = system.create_ticket(title, description, priority_obj)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
                 "description": ticket.description,
                 "state": ticket.state.slug,
+                "priority": ticket.priority.slug,
             }
         finally:
             system.close()
@@ -125,6 +146,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 "title": ticket.title,
                 "description": ticket.description,
                 "state": ticket.state.slug,
+                "priority": ticket.priority.slug,
             }
         finally:
             system.close()
@@ -222,6 +244,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                             "id": ticket.id,
                             "title": ticket.title,
                             "state": ticket.state.slug,
+                            "priority": ticket.priority.slug,
                         }
                     )
                     if len(result) >= limit:
@@ -316,6 +339,45 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             state_machine = system.get_state_machine()
             states = state_machine.get_all_states()
             return [{"id": s.state_id, "slug": s.slug} for s in states]
+        finally:
+            system.close()
+
+    @mcp.tool()
+    def list_ticket_priorities() -> list[dict[str, Any]]:
+        """Use when you need to know valid priorities for issue tickets in the
+        ticket tracking system. Returns all possible priorities with their slugs."""
+        system = TicketingSystem(database_path)
+        try:
+            priority_manager = system.get_priority_machine()
+            priorities = priority_manager.get_all_priorities()
+            return [{"id": p.priority_id, "slug": p.slug} for p in priorities]
+        finally:
+            system.close()
+
+    @mcp.tool()
+    def set_ticket_priority(ticket_id: int, priority: str) -> dict[str, Any]:
+        """Use when setting/changing the priority of an issue ticket in the ticket
+        tracking system. Provide ticket_id and the target priority slug
+        (e.g., 'low', 'normal', 'high'). Returns the updated ticket.
+        Throws if ticket or priority not found."""
+        system = TicketingSystem(database_path)
+        try:
+            ticket = system.get_ticket(ticket_id)
+            if ticket is None:
+                formatted_ticket_id = system.format_ticket_id(ticket_id)
+                raise ValueError(f"Ticket {formatted_ticket_id} not found")
+
+            priority_manager = system.get_priority_machine()
+            target_priority = priority_manager.get_priority_by_slug(priority)
+            if target_priority is None:
+                raise ValueError(f"Unknown priority: {priority}")
+
+            ticket = system.set_ticket_priority(ticket, target_priority)
+            return {
+                "id": ticket.id,
+                "title": ticket.title,
+                "priority": ticket.priority.slug,
+            }
         finally:
             system.close()
 

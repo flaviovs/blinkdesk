@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
-CURRENT_SCHEMA_VERSION = 0
+CURRENT_SCHEMA_VERSION = 1
 
 
 def get_schema_version(conn: sqlite3.Connection) -> int:
@@ -90,6 +90,11 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             name TEXT COLLATE NOCASE UNIQUE NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS ticket_priorities (
+            priority_id INTEGER PRIMARY KEY,
+            slug TEXT COLLATE NOCASE UNIQUE NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS state_transitions (
             from_state_id INTEGER REFERENCES ticket_states(state_id),
             to_state_id INTEGER REFERENCES ticket_states(state_id),
@@ -101,6 +106,7 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             title TEXT NOT NULL,
             description TEXT,
             state_id INTEGER REFERENCES ticket_states(state_id),
+            priority_id INTEGER REFERENCES ticket_priorities(priority_id),
             assignee_entity_id INTEGER REFERENCES entities(entity_id),
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL

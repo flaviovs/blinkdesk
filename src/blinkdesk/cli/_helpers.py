@@ -31,12 +31,13 @@ def _format_table(
     if tickets_get:
         t = tickets_get
         ticket_id = f"{prefix}{t['id']}" if prefix else str(t["id"])
-        print(f"ID:      {ticket_id}")
-        print(f"Title:   {t['title']}")
-        print(f"State:   {t['state']}")
+        print(f"ID:       {ticket_id}")
+        print(f"Title:    {t['title']}")
+        print(f"State:    {t['state']}")
+        print(f"Priority: {t['priority']}")
         print(f"Assignee: {t['assignee'] or '(none)'}")
-        print(f"Created: {t['created_at']}")
-        print(f"Updated: {t['updated_at']}")
+        print(f"Created:  {t['created_at']}")
+        print(f"Updated:  {t['updated_at']}")
         if t["description"]:
             print(f"\nDescription:\n{t['description']}")
         return
@@ -45,13 +46,16 @@ def _format_table(
         print("No tickets found.")
         return
 
-    print(f"{'ID':<5} {'Title':<30} {'State':<12} {'Assignee'}")
-    print("-" * 60)
+    print(f"{'ID':<5} {'Title':<30} {'State':<12} {'Priority':<10} {'Assignee'}")
+    print("-" * 75)
     for t in tickets:
         assignee = t["assignee"] or "-"
         title = t["title"][:27] + "..." if len(t["title"]) > 30 else t["title"]
         ticket_id = f"{prefix}{t['id']}" if prefix else str(t["id"])
-        print(f"{ticket_id:<5} {title:<30} {t['state']:<12} {assignee}")
+        print(
+            f"{ticket_id:<5} {title:<30} {t['state']:<12} "
+            f"{t['priority']:<10} {assignee}"
+        )
 
 
 def _format_json(data: list[dict[str, Any]] | dict[str, Any]) -> None:

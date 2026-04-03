@@ -74,6 +74,11 @@ def seed_db(db_path: str, config_path: str) -> None:
     try:
         _seed_entities(conn, _convert_list_to_dict(config.get("entities", [])))
         _seed_states(conn, _convert_list_to_dict(config.get("states", [])))
+        _seed_priorities(
+            conn,
+            _convert_list_to_dict(config.get("priorities", [])),
+            config.get("default_priority", "normal"),
+        )
         _seed_transitions(
             conn, _convert_transitions_list(config.get("transitions", []))
         )
@@ -112,6 +117,20 @@ def seed_db_from_dict(db_path: str, data: dict[str, Any]) -> None:
                 slug = state.get("slug", name.lower().replace(" ", "-"))
                 states_dict[slug] = {"name": name}
             _seed_states(conn, states_dict)
+
+        priorities = data.get("priorities", [])
+        default_priority = data.get("default_priority", "normal")
+        if priorities:
+            priorities_dict: dict[str, dict[str, Any]] = {}
+            for p in priorities:
+                slug = p.get("slug", "")
+                if not slug:
+                    name = p.get("name", "").lower().replace(" ", "-")
+                    slug = name
+                priorities_dict[slug] = {}
+            _seed_priorities(conn, priorities_dict, default_priority)
+        else:
+            _seed_priorities(conn, {}, default_priority)
 
         transitions = data.get("transitions", [])
         if transitions:
@@ -161,6 +180,36 @@ def _seed_states(conn: sqlite3.Connection, states: dict[str, Any]) -> None:
             "INSERT INTO ticket_states (slug, name) VALUES (?, ?)",
             (slug, name),
         )
+    conn.commit()
+
+
+def _seed_priorities(
+    conn: sqlite3.Connection, priorities: dict[str, Any], default_priority: str
+) -> None:
+    """Seed priorities from config.
+
+    Args:
+        conn: Database connection.
+        priorities: Dict of priority slug -> {}.
+        default_priority: Slug of the default priority.
+    """
+    if not priorities:
+        priorities = {"low": {}, "normal": {}, "high": {}}
+
+    for slug in priorities.keys():
+        conn.execute(
+            "INSERT OR IGNORE INTO ticket_priorities (slug) VALUES (?)",
+            (slug,),
+        )
+
+    cursor = conn.execute(
+        "SELECT priority_id FROM ticket_priorities WHERE slug = ?",
+        (default_priority,),
+    )
+    row = cursor.fetchone()
+    if row is None:
+        raise ValueError(f"Default priority '{default_priority}' not found")
+
     conn.commit()
 
 

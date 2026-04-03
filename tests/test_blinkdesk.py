@@ -369,6 +369,7 @@ class TestBlinkDesk(unittest.TestCase):
             output_format="table",
             state=None,
             assignee=None,
+            priority=None,
             slug=False,
         )
         out = io.StringIO()
@@ -405,6 +406,7 @@ class TestBlinkDesk(unittest.TestCase):
             output_format="json",
             state=None,
             assignee=None,
+            priority=None,
             slug=False,
         )
         out = io.StringIO()
@@ -499,6 +501,7 @@ class TestBlinkDesk(unittest.TestCase):
             output_format="table",
             state=None,
             assignee=None,
+            priority=None,
             slug=False,
         )
         out = io.StringIO()
@@ -530,7 +533,7 @@ class TestBlinkDesk(unittest.TestCase):
             cmd_ticket_get(args)
         output = out.getvalue()
 
-        self.assertIn("ID:      BD-1", output)
+        self.assertIn("ID:       BD-1", output)
         self.assertNotIn("BD-BD-1", output)
 
     def test_ticket_get_table_includes_logs_and_comments(self) -> None:

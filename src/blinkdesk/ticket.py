@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from blinkdesk.entity import Entity
+from blinkdesk.priority import TicketPriority
 from blinkdesk.state import TicketState
 
 
@@ -16,6 +17,7 @@ class Ticket:
     title: str
     description: str | None
     state: TicketState
+    priority: TicketPriority
     assignee: Entity | None
     created_at: datetime
     updated_at: datetime
@@ -32,6 +34,7 @@ class Ticket:
         cls,
         row: sqlite3.Row,
         state: TicketState,
+        priority: TicketPriority,
         assignee: Entity | None,
     ) -> "Ticket":
         """Create a Ticket from a database row.
@@ -39,6 +42,7 @@ class Ticket:
         Args:
             row: Database row.
             state: Current state of the ticket.
+            priority: Priority of the ticket.
             assignee: Entity assigned to the ticket, if any.
 
         Returns:
@@ -49,6 +53,7 @@ class Ticket:
             title=row["title"],
             description=row["description"] if row["description"] else None,
             state=state,
+            priority=priority,
             assignee=assignee,
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),

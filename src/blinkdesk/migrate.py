@@ -12,6 +12,35 @@ from blinkdesk._db import (
 MIGRATIONS: list[tuple[int, Callable[[sqlite3.Connection], None]]] = []
 
 
+def _migrate_v0_to_v1(conn: sqlite3.Connection) -> None:
+    """Migrate from schema v0 to v1: add ticket_priorities table."""
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS ticket_priorities (
+            priority_id INTEGER PRIMARY KEY,
+            slug TEXT COLLATE NOCASE UNIQUE NOT NULL
+        );
+
+        ALTER TABLE tickets ADD COLUMN priority_id INTEGER
+            REFERENCES ticket_priorities(priority_id);
+
+        INSERT INTO ticket_priorities (slug) VALUES ('low');
+        INSERT INTO ticket_priorities (slug) VALUES ('normal');
+        INSERT INTO ticket_priorities (slug) VALUES ('high');
+
+        UPDATE tickets SET priority_id = (
+            SELECT priority_id FROM ticket_priorities WHERE slug = 'normal'
+        );
+        """
+    )
+    conn.commit()
+
+
+MIGRATIONS = [
+    (0, _migrate_v0_to_v1),
+]
+
+
 def run_migrations(conn: sqlite3.Connection) -> None:
     """Run migrations to bring the database schema up to date.
 

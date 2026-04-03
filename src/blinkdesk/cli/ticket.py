@@ -20,7 +20,11 @@ def cmd_ticket_create(args: argparse.Namespace) -> None:
     db_path = _get_database_path(args)
     system = TicketingSystem(db_path)
     try:
-        ticket = system.create_ticket(args.title, args.description)
+        priority = system.get_priority_machine().get_priority_by_slug(args.priority)
+        if priority is None:
+            print(f"Priority not found: {args.priority}", file=sys.stderr)
+            sys.exit(1)
+        ticket = system.create_ticket(args.title, args.description, priority)
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Ticket created: {ticket_id}")
     finally:
@@ -63,7 +67,18 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
                 print(f"Assignee not found: {args.assignee}", file=sys.stderr)
                 sys.exit(1)
 
+        priority = None
+        if args.priority:
+            priority = system.get_priority_machine().get_priority_by_slug(args.priority)
+            if priority is None:
+                print(f"Priority not found: {args.priority}", file=sys.stderr)
+                sys.exit(1)
+
         tickets = system.list_tickets(state=state, assignee=assignee)
+        if priority:
+            tickets = [
+                t for t in tickets if t.priority.priority_id == priority.priority_id
+            ]
         prefix = system.display_prefix
         data = [
             {
@@ -71,6 +86,8 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
                 "title": t.title,
                 "state": t.state.name,
                 "state_slug": t.state.slug,
+                "priority": t.priority.slug,
+                "priority_slug": t.priority.slug,
                 "assignee": t.assignee.name if t.assignee else None,
                 "assignee_slug": t.assignee.slug if t.assignee else None,
                 "created_at": t.created_at.isoformat(),
@@ -90,6 +107,7 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
                         "id": d["id"],
                         "title": d["title"],
                         "state": d["state_slug"],
+                        "priority": d["priority_slug"],
                         "assignee": d["assignee_slug"],
                         "created_at": d["created_at"],
                         "updated_at": d["updated_at"],
@@ -122,6 +140,8 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
             "title": ticket.title,
             "state": ticket.state.name,
             "state_slug": ticket.state.slug,
+            "priority": ticket.priority.slug,
+            "priority_slug": ticket.priority.slug,
             "assignee": ticket.assignee.name if ticket.assignee else None,
             "assignee_slug": ticket.assignee.slug if ticket.assignee else None,
             "created_at": ticket.created_at.isoformat(),
@@ -142,6 +162,7 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
                     "id": data["id"],
                     "title": data["title"],
                     "state": data["state_slug"],
+                    "priority": data["priority_slug"],
                     "assignee": data["assignee_slug"],
                     "created_at": data["created_at"],
                     "updated_at": data["updated_at"],

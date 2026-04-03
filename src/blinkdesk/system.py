@@ -9,6 +9,7 @@ from pathlib import Path
 from blinkdesk.comment import Comment
 from blinkdesk.entity import Entity
 from blinkdesk.migrate import run_migrations
+from blinkdesk.priority import TicketPriority, TicketPriorityManager
 from blinkdesk.state import TicketState, TicketStateMachine
 from blinkdesk.ticket import Ticket
 from blinkdesk.ticket_log import TicketLog, TicketLogAction
@@ -17,14 +18,17 @@ logger = logging.getLogger(__name__)
 
 _TICKET_SELECT_QUERY = """
 SELECT
-    t.ticket_id, t.title, t.description, t.state_id,
+    t.ticket_id, t.title, t.description, t.state_id, t.priority_id,
     t.assignee_entity_id, t.created_at, t.updated_at,
     e.entity_id, e.slug AS entity_slug, e.name AS entity_name,
     ts.state_id AS state_id_new,
-    ts.slug AS state_slug, ts.name AS state_name
+    ts.slug AS state_slug, ts.name AS state_name,
+    tp.priority_id AS priority_id_new,
+    tp.slug AS priority_slug
 FROM tickets t
 LEFT JOIN entities e ON t.assignee_entity_id = e.entity_id
 JOIN ticket_states ts ON t.state_id = ts.state_id
+LEFT JOIN ticket_priorities tp ON t.priority_id = tp.priority_id
 """
 
 
@@ -48,6 +52,7 @@ class TicketingSystem:
         self._conn.execute("PRAGMA foreign_keys = ON")
         run_migrations(self._conn)
         self._state_machine = TicketStateMachine(self._conn)
+        self._priority_manager = TicketPriorityManager(self._conn)
 
     def close(self) -> None:
         """Close the database connection."""
@@ -194,12 +199,18 @@ class TicketingSystem:
         )
         self._conn.commit()
 
-    def create_ticket(self, title: str, description: str | None = None) -> Ticket:
+    def create_ticket(
+        self,
+        title: str,
+        description: str | None = None,
+        priority: TicketPriority | None = None,
+    ) -> Ticket:
         """Create a new ticket.
 
         Args:
             title: Title of the ticket.
             description: Optional description of the ticket.
+            priority: Optional priority (defaults to "normal").
 
         Returns:
             The created Ticket.
@@ -210,16 +221,30 @@ class TicketingSystem:
         states = self._state_machine.get_all_states()
         if not states:
             raise ValueError("No states defined in the system")
+
+        if priority is None:
+            priority = self._priority_manager.get_priority_by_slug("normal")
+            if priority is None:
+                raise ValueError("Default priority 'normal' not found")
+
         initial_state = states[0]
         now = datetime.now(timezone.utc).isoformat()
         cursor = self._conn.execute(
             """
             INSERT INTO tickets (
-                title, description, state_id, assignee_entity_id, created_at, updated_at
+                title, description, state_id, priority_id,
+                assignee_entity_id, created_at, updated_at
             )
-            VALUES (?, ?, ?, NULL, ?, ?)
+            VALUES (?, ?, ?, ?, NULL, ?, ?)
             """,
-            (title, description, initial_state.state_id, now, now),
+            (
+                title,
+                description,
+                initial_state.state_id,
+                priority.priority_id,
+                now,
+                now,
+            ),
         )
         self._conn.commit()
         last_id = cursor.lastrowid
@@ -232,6 +257,7 @@ class TicketingSystem:
             title=title,
             description=description,
             state=initial_state,
+            priority=priority,
             assignee=None,
             created_at=datetime.fromisoformat(now),
             updated_at=datetime.fromisoformat(now),
@@ -311,6 +337,33 @@ class TicketingSystem:
         self._conn.commit()
         self._log_ticket(ticket.id, TicketLogAction.UPDATED)
         logger.info("Updated ticket #%d", ticket.id)
+        return self.get_ticket(ticket.id)  # type: ignore[return-value]
+
+    def set_ticket_priority(self, ticket: Ticket, priority: TicketPriority) -> Ticket:
+        """Set a ticket's priority.
+
+        Args:
+            ticket: Ticket to update.
+            priority: New priority.
+
+        Returns:
+            The updated Ticket.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        self._conn.execute(
+            """
+            UPDATE tickets SET priority_id = ?, updated_at = ?
+            WHERE ticket_id = ?
+            """,
+            (priority.priority_id, now, ticket.id),
+        )
+        self._conn.commit()
+        self._log_ticket(
+            ticket.id,
+            TicketLogAction.UPDATED,
+            details=f"priority changed to {priority.slug}",
+        )
+        logger.info("Set priority of ticket #%d to %s", ticket.id, priority.slug)
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
     def assign_ticket(self, ticket: Ticket, entity: Entity) -> Ticket:
@@ -541,6 +594,14 @@ class TicketingSystem:
         """
         return self._state_machine
 
+    def get_priority_machine(self) -> TicketPriorityManager:
+        """Get the priority manager.
+
+        Returns:
+            The TicketPriorityManager instance.
+        """
+        return self._priority_manager
+
     def _ticket_from_row(self, row: sqlite3.Row) -> Ticket:
         """Create a Ticket from a database row.
 
@@ -555,6 +616,10 @@ class TicketingSystem:
             slug=row["state_slug"],
             name=row["state_name"],
         )
+        priority = TicketPriority(
+            priority_id=row["priority_id_new"],
+            slug=row["priority_slug"],
+        )
         assignee: Entity | None = None
         if row["entity_id"] is not None:
             assignee = Entity(
@@ -567,6 +632,7 @@ class TicketingSystem:
             title=row["title"],
             description=row["description"] if row["description"] else None,
             state=state,
+            priority=priority,
             assignee=assignee,
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
