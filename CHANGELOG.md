@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
+## [0.4.0] - 2026-04-02
+
+### Added
+
+- Add `--name` / `-n` flag to `bd mcp` subcommands to customize the MCP server name (default: "BlinkDesk")
+
 ## [0.3.0] - 2026-04-02
 
 ### Added
