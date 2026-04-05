@@ -1,9 +1,19 @@
 import argparse
 import io
 import json
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
+from unittest.mock import patch
 
-from blinkdesk.cli.ticket import cmd_ticket_get, cmd_ticket_list
+from blinkdesk.cli.main import main as cli_main
+from blinkdesk.cli.ticket import (
+    cmd_ticket_assign,
+    cmd_ticket_comment,
+    cmd_ticket_get,
+    cmd_ticket_list,
+    cmd_ticket_set_priority,
+    cmd_ticket_transition,
+    cmd_ticket_unassign,
+)
 from tests._base import BlinkDeskTestCase
 
 
@@ -298,3 +308,301 @@ class TestCliTicket(BlinkDeskTestCase):
         self.assertNotIn("Logs:", output)
         self.assertNotIn("Comments:", output)
         self.assertNotIn("Test comment", output)
+
+    def test_ticket_assign(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            assignee="alice",
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_assign(args)
+        self.assertIn("Ticket assigned:", out.getvalue())
+
+        refreshed = system.get_ticket(ticket.id)
+        assert refreshed is not None
+        assert refreshed.assignee is not None
+        self.assertEqual(refreshed.assignee.slug, "alice")
+
+    def test_ticket_assign_fails_when_assignee_not_found(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            assignee="missing",
+        )
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with redirect_stderr(err):
+                cmd_ticket_assign(args)
+        self.assertIn("Assignee not found: missing", err.getvalue())
+
+    def test_ticket_unassign(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        entity = system.get_entity_by_slug("alice")
+        assert entity is not None
+
+        ticket = system.create_ticket("Test")
+        system.assign_ticket(ticket, entity)
+
+        args = argparse.Namespace(database_path=self.db_path, ticket_id=ticket.id)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_unassign(args)
+        self.assertIn("Ticket unassigned:", out.getvalue())
+
+        refreshed = system.get_ticket(ticket.id)
+        assert refreshed is not None
+        self.assertIsNone(refreshed.assignee)
+
+    def test_ticket_transition(self) -> None:
+        data = {
+            "states": ["open", "in_progress", "closed"],
+            "transitions": [
+                {"from": "open", "to": "in_progress"},
+                {"from": "in_progress", "to": "closed"},
+            ],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            state="in_progress",
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_transition(args)
+        self.assertIn("Ticket transitioned:", out.getvalue())
+
+        refreshed = system.get_ticket(ticket.id)
+        assert refreshed is not None
+        self.assertEqual(refreshed.state.slug, "in_progress")
+
+    def test_ticket_transition_fails_when_state_not_found(self) -> None:
+        data = {
+            "states": ["open", "closed"],
+            "transitions": [{"from": "open", "to": "closed"}],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            state="missing",
+        )
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with redirect_stderr(err):
+                cmd_ticket_transition(args)
+        self.assertIn("State not found: missing", err.getvalue())
+
+    def test_ticket_transition_fails_when_invalid_transition(self) -> None:
+        data = {
+            "states": ["open", "in_progress", "closed"],
+            "transitions": [{"from": "open", "to": "in_progress"}],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            state="closed",
+        )
+        with self.assertRaises(ValueError) as ctx:
+            cmd_ticket_transition(args)
+        self.assertIn("Invalid transition", str(ctx.exception))
+
+    def test_ticket_set_priority(self) -> None:
+        data = {
+            "states": ["open"],
+            "priorities": ["low", "normal", "high"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            priority="high",
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_set_priority(args)
+        self.assertIn("Ticket priority set:", out.getvalue())
+
+        refreshed = system.get_ticket(ticket.id)
+        assert refreshed is not None
+        self.assertEqual(refreshed.priority.slug, "high")
+
+    def test_ticket_set_priority_fails_when_priority_not_found(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            priority="missing",
+        )
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with redirect_stderr(err):
+                cmd_ticket_set_priority(args)
+        self.assertIn("Priority not found: missing", err.getvalue())
+
+    def test_ticket_comment_with_state_transition(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open", "closed"],
+            "transitions": [{"from": "open", "to": "closed"}],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            entity="alice",
+            comment="Closing",
+            state="closed",
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_comment(args)
+        self.assertIn("Comment added to ticket", out.getvalue())
+
+        refreshed = system.get_ticket(ticket.id)
+        assert refreshed is not None
+        self.assertEqual(refreshed.state.slug, "closed")
+
+    def test_ticket_comment_fails_when_state_not_found(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            entity="alice",
+            comment="Trying state",
+            state="missing",
+        )
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with redirect_stderr(err):
+                cmd_ticket_comment(args)
+        self.assertIn("State not found: missing", err.getvalue())
+
+    def test_cli_main_supports_short_flags_for_ticket_subcommands(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open", "closed"],
+            "priorities": ["low", "normal", "high"],
+            "transitions": [{"from": "open", "to": "closed"}],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Initial")
+
+        out = io.StringIO()
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "create",
+                "-t",
+                "Short title",
+                "-m",
+                "Short description",
+                "-p",
+                "high",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "assign",
+                str(ticket.id),
+                "-a",
+                "alice",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "set-priority",
+                str(ticket.id),
+                "-p",
+                "high",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "comment",
+                str(ticket.id),
+                "-e",
+                "alice",
+                "-c",
+                "Done",
+                "-s",
+                "closed",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        output = out.getvalue()
+        self.assertIn("Ticket created:", output)
+        self.assertIn("Ticket assigned:", output)
+        self.assertIn("Ticket priority set:", output)
+        self.assertIn("Comment added to ticket", output)

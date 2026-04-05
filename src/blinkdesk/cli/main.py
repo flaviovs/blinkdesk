@@ -34,10 +34,14 @@ from .state import (
     cmd_state_transition_list,
 )
 from .ticket import (
+    cmd_ticket_assign,
     cmd_ticket_comment,
     cmd_ticket_create,
     cmd_ticket_get,
     cmd_ticket_list,
+    cmd_ticket_set_priority,
+    cmd_ticket_transition,
+    cmd_ticket_unassign,
     cmd_ticket_update,
 )
 
@@ -64,10 +68,10 @@ def main() -> None:
     p_create_sub = p_create.add_subparsers(dest="ticket_command", required=True)
 
     create = p_create_sub.add_parser("create", help="Create a ticket")
-    create.add_argument("--title", required=True, help="Ticket title")
-    create.add_argument("--description", help="Ticket description")
+    create.add_argument("-t", "--title", required=True, help="Ticket title")
+    create.add_argument("-m", "--description", help="Ticket description")
     create.add_argument(
-        "--priority", default="normal", help="Priority slug (default: normal)"
+        "-p", "--priority", default="normal", help="Priority slug (default: normal)"
     )
     create.set_defaults(func=cmd_ticket_create)
 
@@ -105,10 +109,38 @@ def main() -> None:
     comment = p_create_sub.add_parser("comment", help="Add a comment")
     comment.add_argument("ticket_id", type=int, help="Ticket ID")
     comment.add_argument(
-        "--entity", required=True, help="Entity (user) adding the comment"
+        "-e", "--entity", required=True, help="Entity (user) adding the comment"
     )
-    comment.add_argument("--comment", required=True, help="Comment text")
+    comment.add_argument("-c", "--comment", required=True, help="Comment text")
+    comment.add_argument(
+        "-s",
+        "--state",
+        help="Optional state slug to transition ticket while commenting",
+    )
     comment.set_defaults(func=cmd_ticket_comment)
+
+    # ticket assign
+    assign = p_create_sub.add_parser("assign", help="Assign a ticket")
+    assign.add_argument("ticket_id", type=int, help="Ticket ID")
+    assign.add_argument("-a", "--assignee", required=True, help="Assignee entity slug")
+    assign.set_defaults(func=cmd_ticket_assign)
+
+    # ticket unassign
+    unassign = p_create_sub.add_parser("unassign", help="Unassign a ticket")
+    unassign.add_argument("ticket_id", type=int, help="Ticket ID")
+    unassign.set_defaults(func=cmd_ticket_unassign)
+
+    # ticket transition
+    transition = p_create_sub.add_parser("transition", help="Transition ticket state")
+    transition.add_argument("ticket_id", type=int, help="Ticket ID")
+    transition.add_argument("-s", "--state", required=True, help="Target state slug")
+    transition.set_defaults(func=cmd_ticket_transition)
+
+    # ticket set-priority
+    set_priority = p_create_sub.add_parser("set-priority", help="Set ticket priority")
+    set_priority.add_argument("ticket_id", type=int, help="Ticket ID")
+    set_priority.add_argument("-p", "--priority", required=True, help="Priority slug")
+    set_priority.set_defaults(func=cmd_ticket_set_priority)
 
     # db vacuum
     p_db = subparsers.add_parser("db", help="Database operations")

@@ -8,9 +8,14 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- CLI commands `bd ticket assign <ticket_id> -a/--assignee`, `bd ticket unassign <ticket_id>`, `bd ticket transition <ticket_id> -s/--state`, and `bd ticket set-priority <ticket_id> -p/--priority`
+
 ### Changed
 
-- No unreleased changes
+- `bd ticket comment` now supports `-s/--state` to transition a ticket while adding a comment
+- Touched ticket subcommands now provide consistent short options (`-t/--title`, `-m/--description`, `-p/--priority`, `-e/--entity`, `-c/--comment`)
 
 ## [0.6.0] - 2026-04-04
 

@@ -160,8 +160,103 @@ def cmd_ticket_comment(args: argparse.Namespace) -> None:
             print(f"Entity not found: {args.entity}", file=sys.stderr)
             sys.exit(1)
 
-        ticket = system.add_comment(ticket, entity, args.comment)
+        state_slug = getattr(args, "state", None)
+        new_state = None
+        if state_slug:
+            new_state = system.get_state_machine().get_state_by_slug(state_slug)
+            if new_state is None:
+                print(f"State not found: {state_slug}", file=sys.stderr)
+                sys.exit(1)
+
+        ticket = system.add_comment(ticket, entity, args.comment, new_state=new_state)
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Comment added to ticket {ticket_id}")
+    finally:
+        system.close()
+
+
+def cmd_ticket_assign(args: argparse.Namespace) -> None:
+    """Assign a ticket to an entity."""
+    db_path = _get_database_path(args)
+    system = TicketingSystem(db_path)
+    try:
+        ticket = system.get_ticket(args.ticket_id)
+        if ticket is None:
+            ticket_id = system.format_ticket_id(args.ticket_id)
+            print(f"Ticket not found: {ticket_id}", file=sys.stderr)
+            sys.exit(1)
+
+        assignee = system.get_entity_by_slug(args.assignee)
+        if assignee is None:
+            print(f"Assignee not found: {args.assignee}", file=sys.stderr)
+            sys.exit(1)
+
+        ticket = system.assign_ticket(ticket, assignee)
+        ticket_id = system.format_ticket_id(ticket.id)
+        print(f"Ticket assigned: {ticket_id}")
+    finally:
+        system.close()
+
+
+def cmd_ticket_unassign(args: argparse.Namespace) -> None:
+    """Unassign a ticket."""
+    db_path = _get_database_path(args)
+    system = TicketingSystem(db_path)
+    try:
+        ticket = system.get_ticket(args.ticket_id)
+        if ticket is None:
+            ticket_id = system.format_ticket_id(args.ticket_id)
+            print(f"Ticket not found: {ticket_id}", file=sys.stderr)
+            sys.exit(1)
+
+        ticket = system.unassign_ticket(ticket)
+        ticket_id = system.format_ticket_id(ticket.id)
+        print(f"Ticket unassigned: {ticket_id}")
+    finally:
+        system.close()
+
+
+def cmd_ticket_transition(args: argparse.Namespace) -> None:
+    """Transition a ticket to a new state."""
+    db_path = _get_database_path(args)
+    system = TicketingSystem(db_path)
+    try:
+        ticket = system.get_ticket(args.ticket_id)
+        if ticket is None:
+            ticket_id = system.format_ticket_id(args.ticket_id)
+            print(f"Ticket not found: {ticket_id}", file=sys.stderr)
+            sys.exit(1)
+
+        state = system.get_state_machine().get_state_by_slug(args.state)
+        if state is None:
+            print(f"State not found: {args.state}", file=sys.stderr)
+            sys.exit(1)
+
+        ticket = system.transition_ticket(ticket, state)
+        ticket_id = system.format_ticket_id(ticket.id)
+        print(f"Ticket transitioned: {ticket_id}")
+    finally:
+        system.close()
+
+
+def cmd_ticket_set_priority(args: argparse.Namespace) -> None:
+    """Set a ticket's priority."""
+    db_path = _get_database_path(args)
+    system = TicketingSystem(db_path)
+    try:
+        ticket = system.get_ticket(args.ticket_id)
+        if ticket is None:
+            ticket_id = system.format_ticket_id(args.ticket_id)
+            print(f"Ticket not found: {ticket_id}", file=sys.stderr)
+            sys.exit(1)
+
+        priority = system.get_priority_machine().get_priority_by_slug(args.priority)
+        if priority is None:
+            print(f"Priority not found: {args.priority}", file=sys.stderr)
+            sys.exit(1)
+
+        ticket = system.set_ticket_priority(ticket, priority)
+        ticket_id = system.format_ticket_id(ticket.id)
+        print(f"Ticket priority set: {ticket_id}")
     finally:
         system.close()
