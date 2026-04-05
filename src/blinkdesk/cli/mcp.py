@@ -26,7 +26,7 @@ def _get_database_path(args: argparse.Namespace) -> str:
     if env_path:
         return env_path
     raise ValueError(
-        "Database path required: use --database-path or BLINKDESK_DATABASE"
+        "Database path required: use -d/--database-path or BLINKDESK_DATABASE"
     )
 
 
@@ -80,7 +80,7 @@ def add_mcp_subparser(subparsers) -> None:  # type: ignore[no-untyped-def]
         "stdio", help="Start MCP server with stdio transport"
     )
     p_stdio.add_argument(
-        "--name", "-n", default="BlinkDesk", help="Server name (default: BlinkDesk)"
+        "-n", "--name", default="BlinkDesk", help="Server name (default: BlinkDesk)"
     )
     p_stdio.set_defaults(func=cmd_mcp_stdio)
 
@@ -88,24 +88,24 @@ def add_mcp_subparser(subparsers) -> None:  # type: ignore[no-untyped-def]
         "streamable-http", help="Start MCP server with streamable-http transport"
     )
     p_streamable.add_argument(
-        "--name", "-n", default="BlinkDesk", help="Server name (default: BlinkDesk)"
+        "-n", "--name", default="BlinkDesk", help="Server name (default: BlinkDesk)"
     )
     p_streamable.add_argument(
-        "--host", default="localhost", help="HTTP host (default: localhost)"
+        "-H", "--host", default="localhost", help="HTTP host (default: localhost)"
     )
     p_streamable.add_argument(
-        "--port", type=int, default=8000, help="HTTP port (default: 8000)"
+        "-P", "--port", type=int, default=8000, help="HTTP port (default: 8000)"
     )
     p_streamable.set_defaults(func=cmd_mcp_streamable_http)
 
     p_sse = p_mcp_sub.add_parser("sse", help="Start MCP server with SSE transport")
     p_sse.add_argument(
-        "--name", "-n", default="BlinkDesk", help="Server name (default: BlinkDesk)"
+        "-n", "--name", default="BlinkDesk", help="Server name (default: BlinkDesk)"
     )
     p_sse.add_argument(
-        "--host", default="localhost", help="HTTP host (default: localhost)"
+        "-H", "--host", default="localhost", help="HTTP host (default: localhost)"
     )
     p_sse.add_argument(
-        "--port", type=int, default=8000, help="HTTP port (default: 8000)"
+        "-P", "--port", type=int, default=8000, help="HTTP port (default: 8000)"
     )
     p_sse.set_defaults(func=cmd_mcp_sse)

@@ -78,7 +78,7 @@ def main() -> None:
     # ticket update
     update = p_create_sub.add_parser("update", help="Update a ticket")
     update.add_argument("ticket_id", type=int, help="Ticket ID")
-    update.add_argument("--title", required=True, help="New ticket title")
+    update.add_argument("-t", "--title", required=True, help="New ticket title")
     update.set_defaults(func=cmd_ticket_update)
 
     # ticket list
@@ -284,7 +284,7 @@ def main() -> None:
     priority_rename.add_argument("old_slug", help="Current priority slug")
     priority_rename.add_argument("new_slug", help="New priority slug")
     priority_rename.add_argument(
-        "--position", help="New priority position", type=int, default=None
+        "-p", "--position", help="New priority position", type=int, default=None
     )
     priority_rename.set_defaults(func=cmd_priority_rename)
 

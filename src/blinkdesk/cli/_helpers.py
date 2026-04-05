@@ -18,7 +18,7 @@ def _get_database_path(args: argparse.Namespace) -> str:
     if env_path:
         return env_path
     raise ValueError(
-        "Database path required: use --database-path or BLINKDESK_DATABASE"
+        "Database path required: use -d/--database-path or BLINKDESK_DATABASE"
     )
 
 

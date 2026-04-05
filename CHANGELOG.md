@@ -16,6 +16,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 - `bd ticket comment` now supports `-s/--state` to transition a ticket while adding a comment
 - Touched ticket subcommands now provide consistent short options (`-t/--title`, `-m/--description`, `-p/--priority`, `-e/--entity`, `-c/--comment`)
+- Standardize remaining CLI flags with short/long pairs: `ticket update -t/--title`, `priority rename -p/--position`, and MCP transport networking options `-H/--host`, `-P/--port`
 
 ## [0.6.0] - 2026-04-04
 

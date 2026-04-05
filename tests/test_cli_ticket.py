@@ -606,3 +606,117 @@ class TestCliTicket(BlinkDeskTestCase):
         self.assertIn("Ticket assigned:", output)
         self.assertIn("Ticket priority set:", output)
         self.assertIn("Comment added to ticket", output)
+
+    def test_cli_main_supports_short_flag_for_ticket_update_title(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Initial")
+
+        out = io.StringIO()
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "update",
+                str(ticket.id),
+                "-t",
+                "Updated via short option",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        refreshed = system.get_ticket(ticket.id)
+        assert refreshed is not None
+        self.assertEqual(refreshed.title, "Updated via short option")
+        self.assertIn("Ticket updated:", out.getvalue())
+
+    def test_cli_main_supports_short_flag_for_priority_rename_position(self) -> None:
+        with patch("blinkdesk.cli.main.cmd_priority_rename") as mock_cmd:
+            with patch(
+                "sys.argv",
+                [
+                    "bd",
+                    "-d",
+                    self.db_path,
+                    "priority",
+                    "rename",
+                    "normal",
+                    "urgent",
+                    "-p",
+                    "7",
+                ],
+            ):
+                cli_main()
+
+        mock_cmd.assert_called_once()
+        args = mock_cmd.call_args[0][0]
+        self.assertEqual(args.old_slug, "normal")
+        self.assertEqual(args.new_slug, "urgent")
+        self.assertEqual(args.position, 7)
+
+    def test_cli_main_supports_short_flags_for_mcp_streamable_http(self) -> None:
+        with patch("blinkdesk.cli.mcp.cmd_mcp_streamable_http") as mock_cmd:
+            with patch(
+                "sys.argv",
+                [
+                    "bd",
+                    "-d",
+                    self.db_path,
+                    "mcp",
+                    "streamable-http",
+                    "-n",
+                    "Desk",
+                    "-H",
+                    "0.0.0.0",
+                    "-P",
+                    "9001",
+                ],
+            ):
+                cli_main()
+
+        mock_cmd.assert_called_once()
+        args = mock_cmd.call_args[0][0]
+        self.assertEqual(args.name, "Desk")
+        self.assertEqual(args.host, "0.0.0.0")
+        self.assertEqual(args.port, 9001)
+
+    def test_cli_main_supports_short_flags_for_mcp_sse(self) -> None:
+        with patch("blinkdesk.cli.mcp.cmd_mcp_sse") as mock_cmd:
+            with patch(
+                "sys.argv",
+                [
+                    "bd",
+                    "-d",
+                    self.db_path,
+                    "mcp",
+                    "sse",
+                    "-n",
+                    "Desk SSE",
+                    "-H",
+                    "127.0.0.1",
+                    "-P",
+                    "8123",
+                ],
+            ):
+                cli_main()
+
+        mock_cmd.assert_called_once()
+        args = mock_cmd.call_args[0][0]
+        self.assertEqual(args.name, "Desk SSE")
+        self.assertEqual(args.host, "127.0.0.1")
+        self.assertEqual(args.port, 8123)
+
+    def test_cli_error_mentions_short_and_long_database_flags(self) -> None:
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with patch("sys.argv", ["bd", "ticket", "list"]):
+                with redirect_stderr(err):
+                    cli_main()
+
+        self.assertIn("-d/--database-path", err.getvalue())
