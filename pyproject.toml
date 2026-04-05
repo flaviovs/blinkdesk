@@ -16,7 +16,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff", "mypy"]
+dev = ["ruff", "mypy", "vulture"]
 mcp = ["mcp>=1.0.0"]
 
 [project.scripts]
@@ -41,3 +41,6 @@ select = ["E", "F", "ARG"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.vulture]
+min_confidence = 80

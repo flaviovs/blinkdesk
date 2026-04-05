@@ -1,6 +1,6 @@
 # BlinkDesk - Agent Guidelines
 
-Lightweight ticketing system using SQLite with Python stdlib only. Follows Semantic Versioning 2.0.0.
+Lightweight ticketing system using SQLite. Core runtime and MCP integrations use Python stdlib only; only development dependencies may use optional extras defined in `pyproject.toml`. Follows Semantic Versioning 2.0.0.
 
 ## Essential Project Structure
 
@@ -42,13 +42,19 @@ blinkdesk/
 
 ```bash
 # Run all tests
-python -m unittest discover -s tests -p "test_*.py" --buffer --failfast
+python -m unittest discover --start-directory=tests --pattern="test_*.py" --buffer --failfast
+
+# Run a focused test module
+python -m unittest tests.test_cli_ticket --buffer --failfast
 
 # Run linter
-ruff check src/
+python -m ruff check src/
 
 # Run type checker
-mypy src/
+python -m mypy src/
+
+# Run dead code analysis
+python -m vulture src/ tests/
 ```
 
 ## CLI Usage
@@ -72,15 +78,22 @@ bd -d mydb.db mcp stdio
 ## Code Requirements
 
 - Python 3.11+
-- No external dependencies
+- Core runtime has no external dependencies
 - Use unittest
-- Run unittest/lint/type checks only when Python files (`*.py`) changed
+- Run unittest/lint/type/dead-code checks only when Python files (`*.py`) changed
 - Always use type hints
 - Use absolute imports
 - Add Google Standard docstrings to public APIs
-- All changes need unit tests
+- Add or update unit tests for behavior changes
 - Document user-facing changes in CHANGELOG.md
 - When manually testing the `bd` CLI, use `$VIRTUAL_ENV/tmp` for temporary databases
+
+## Definition of Done
+
+- Behavior changes have corresponding unit test updates
+- When Python files changed, run relevant `unittest`, `ruff`, `mypy`, and `vulture` checks
+- User-facing behavior changes are documented in CHANGELOG.md
+- Changes are scoped to the request; avoid unrelated edits
 
 ## Version Handling
 - Version is in `src/blinkdesk/__init__.py`
@@ -89,12 +102,25 @@ bd -d mydb.db mcp stdio
 - Use Semantic Versioning: patch for bug fixes, minor for new features
 - **Never bump major version unless the user explicitly requests it**
 - After bumping version, you must ensure that `CHANGELOG.md` is updated
-- When releasing a version, keep the `## Unreleased` section for future changes
 
 ## Changelog Guidelines
 
-- Sections must follow the order: `## Unreleased` first, then `## X.Y.Z` (released versions)
-- Changes must always be added under an `## Unreleased` section
+- Sections must always be in release order after "Unreleased". Example:
+  ```
+  ## [Unreleased]
+
+  - No unreleased changes
+
+  ## [0.4.0] - 2026-04-02
+
+  ...
+
+  ## [0.3.0] - 2026-04-02
+
+  ...
+  ```
+- "Unreleased" section must always come first
+- You must add sub-sections (`### Fixed`, `### Added`, etc.) to "Unreleased"
 - One changeset = one line
 - Focus on user-facing behavior, not implementation details
 - Do not document what can be discovered by `git diff`
@@ -102,7 +128,8 @@ bd -d mydb.db mcp stdio
 
 ## Git Guidelines
 
-- Do not use write commands (`git branch`, `git rebase`, etc.) unless explicitly permitted.
+- Do not run destructive history-rewrite commands (for example, `git reset --hard`, `git rebase`) unless explicitly permitted.
+- Avoid creating or switching branches unless explicitly requested.
 - Never run `git push`.
 - Commit only when explicitly requested by the user.
 - Keep commit titles under 50 characters.
