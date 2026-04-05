@@ -10,6 +10,12 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- No unreleased changes
+
+## [0.7.0] - 2026-04-04
+
+### Added
+
 - CLI commands `bd ticket assign <ticket_id> -a/--assignee`, `bd ticket unassign <ticket_id>`, `bd ticket transition <ticket_id> -s/--state`, and `bd ticket set-priority <ticket_id> -p/--priority`
 
 ### Changed
