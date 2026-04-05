@@ -10,6 +10,12 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Changed
 
+- No unreleased changes
+
+## [0.6.0] - 2026-04-04
+
+### Changed
+
 - **BC BREAK** TOML workflow definition keys now live under `[schema]` (`entities`, `states`, `priorities`, `transitions`) while runtime settings remain under `[options]`
 
 ## [0.5.0] - 2026-04-03
