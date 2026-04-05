@@ -12,7 +12,6 @@ class TestMigrations(BlinkDeskTestCase):
     def test_run_migrations_logs_when_up_to_date(self) -> None:
         init_db(self.db_path)
         conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
         try:
             conn.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
             with self.assertLogs("blinkdesk.migrate", level="INFO") as cm:
@@ -50,7 +49,6 @@ class TestMigrations(BlinkDeskTestCase):
 
     def test_migration_step_rolls_back_on_error(self) -> None:
         conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
         try:
             conn.execute("PRAGMA user_version = 0")
             conn.execute("CREATE TABLE migration_probe (id INTEGER PRIMARY KEY)")

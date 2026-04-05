@@ -127,24 +127,6 @@ class TicketStateMachine:
             )
         logger.info("Added state transition: %s -> %s", from_state.slug, to_state.slug)
 
-    def get_or_create_state(self, slug: str) -> TicketState:
-        """Get a state by slug or create it if it doesn't exist.
-
-        Args:
-            slug: URL-friendly slug for the state.
-
-        Returns:
-            The existing or newly created TicketState.
-        """
-        cursor = self._conn.execute(
-            "SELECT state_id, slug FROM ticket_states WHERE slug = ?",
-            (slug,),
-        )
-        row = cursor.fetchone()
-        if row is not None:
-            return TicketState.from_row(row)
-        return self.create_state(slug)
-
     def get_all_transitions(self) -> list[tuple[TicketState, TicketState]]:
         """Get all state transitions.
 

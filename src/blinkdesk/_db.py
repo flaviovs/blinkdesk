@@ -2,9 +2,7 @@
 
 import logging
 import sqlite3
-from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
 
 logger = logging.getLogger(__name__)
 
@@ -144,23 +142,3 @@ def _create_schema(conn: sqlite3.Connection) -> None:
     )
     conn.commit()
     logger.info("Created or verified database schema")
-
-
-@contextmanager
-def _get_connection(
-    db_path: str,
-) -> Generator[sqlite3.Connection, None, None]:
-    """Context manager for database connections.
-
-    Args:
-        db_path: Path to the SQLite database file.
-
-    Yields:
-        A database connection.
-    """
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.close()

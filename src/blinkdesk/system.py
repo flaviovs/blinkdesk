@@ -44,7 +44,6 @@ class TicketingSystem:
         Raises:
             FileNotFoundError: If the database file doesn't exist.
         """
-        self._db_path = db_path
         if not Path(db_path).exists():
             raise FileNotFoundError(f"Database file not found: {db_path}")
         self._conn = sqlite3.connect(db_path)
