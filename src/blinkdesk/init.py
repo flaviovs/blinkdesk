@@ -16,36 +16,19 @@ from blinkdesk._db import (
 logger = logging.getLogger(__name__)
 
 
-def _validate_no_name_field(config: dict[str, Any], section: str) -> None:
-    """Validate that config section doesn't use deprecated 'name' field.
+def _validate_schema_section(schema: dict[str, Any]) -> None:
+    """Validate required schema keys.
 
     Args:
-        config: Parsed TOML config.
-        section: Section name to validate.
+        schema: Schema section data.
 
     Raises:
-        ValueError: If deprecated 'name' field is used.
+        ValueError: If a required schema key is missing or empty.
     """
-    items = config.get(section, [])
-    for item in items:
-        if isinstance(item, dict) and "name" in item:
-            raise ValueError(
-                f"Invalid schema: '{section}' uses deprecated 'name' field. "
-                f"Use slug-only format: {section} = ['slug1', 'slug2']"
-            )
-
-
-def _validate_config(config: dict[str, Any]) -> None:
-    """Validate TOML config doesn't use deprecated format.
-
-    Args:
-        config: Parsed TOML config.
-
-    Raises:
-        ValueError: If deprecated format is detected.
-    """
-    for section in ["entities", "states"]:
-        _validate_no_name_field(config, section)
+    for key in ("entities", "states", "priorities", "transitions"):
+        value = schema.get(key)
+        if not isinstance(value, list) or not value:
+            raise ValueError(f"schema.{key} must be a non-empty list")
 
 
 def init_db(db_path: str) -> sqlite3.Connection:
@@ -83,24 +66,33 @@ def seed_db(db_path: str, config_path: str) -> None:
     with open(config_path, "rb") as f:
         config = tomllib.load(f)
 
-    _validate_config(config)
     logger.info("Seeding database from schema file: %s", config_path)
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         with conn:
-            entities = config.get("entities", [])
-            states = config.get("states", [])
+            schema = config.get("schema", {})
+            options = config.get("options", {})
+
+            if not isinstance(schema, dict):
+                schema = {}
+            if not isinstance(options, dict):
+                options = {}
+
+            _validate_schema_section(schema)
+
+            entities = schema.get("entities", [])
+            states = schema.get("states", [])
             _seed_entities(conn, entities)
             _seed_states(conn, states)
             _seed_priorities(
                 conn,
-                config.get("priorities", []),
-                config.get("options", {}).get("default_priority", "normal"),
+                schema.get("priorities", []),
+                options.get("default_priority", "normal"),
             )
-            _seed_transitions(conn, config.get("transitions", []))
-            _seed_options(conn, config.get("options", {}))
+            _seed_transitions(conn, schema.get("transitions", []))
+            _seed_options(conn, options)
             set_schema_version(conn, CURRENT_SCHEMA_VERSION)
             logger.info("Seeded database from schema file")
     finally:
@@ -112,27 +104,36 @@ def seed_db_from_dict(db_path: str, data: dict[str, Any]) -> None:
 
     Args:
         db_path: Path to the SQLite database file.
-        data: Configuration dictionary with entities, states, transitions, options.
+        data: Configuration dictionary with "schema" and optional "options".
 
     Raises:
         ValueError: If the configuration is invalid.
     """
-    _validate_config(data)
     logger.info("Seeding database from in-memory schema")
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         with conn:
-            _seed_entities(conn, data.get("entities", []))
-            _seed_states(conn, data.get("states", []))
+            schema = data.get("schema", {})
+            options = data.get("options", {})
+
+            if not isinstance(schema, dict):
+                schema = {}
+            if not isinstance(options, dict):
+                options = {}
+
+            _validate_schema_section(schema)
+
+            _seed_entities(conn, schema.get("entities", []))
+            _seed_states(conn, schema.get("states", []))
             _seed_priorities(
                 conn,
-                data.get("priorities", []),
-                data.get("options", {}).get("default_priority", "normal"),
+                schema.get("priorities", []),
+                options.get("default_priority", "normal"),
             )
-            _seed_transitions(conn, data.get("transitions", []))
-            _seed_options(conn, data.get("options", {}))
+            _seed_transitions(conn, schema.get("transitions", []))
+            _seed_options(conn, options)
             set_schema_version(conn, CURRENT_SCHEMA_VERSION)
             logger.info("Seeded database from in-memory schema")
     finally:

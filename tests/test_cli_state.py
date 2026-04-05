@@ -95,6 +95,7 @@ class TestCliState(BlinkDeskTestCase):
     def test_state_transition_add(self) -> None:
         data = {
             "states": ["open", "closed"],
+            "transitions": [{"from": "open", "to": "open"}],
         }
         system = self._init_system(data)
 
@@ -110,7 +111,7 @@ class TestCliState(BlinkDeskTestCase):
         self.assertIn("Transition added: open -> closed", output)
 
         transitions = system.get_state_machine().get_all_transitions()
-        self.assertEqual(len(transitions), 1)
+        self.assertEqual(len(transitions), 2)
 
     def test_state_transition_delete(self) -> None:
         data = {

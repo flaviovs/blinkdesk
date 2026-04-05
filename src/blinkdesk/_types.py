@@ -3,25 +3,20 @@
 from typing import TypedDict
 
 
-class EntityDict(TypedDict):
-    """Type definition for entity configuration."""
-
-    slug: str
-    name: str
-
-
-class StateDict(TypedDict):
-    """Type definition for state configuration."""
-
-    slug: str
-    name: str
+TransitionDict = TypedDict(
+    "TransitionDict",
+    {"from": str, "to": str},
+)
+"""Type definition for transition configuration."""
 
 
-class TransitionDict(TypedDict):
-    """Type definition for transition configuration."""
+class SchemaDict(TypedDict, total=False):
+    """Type definition for schema data."""
 
-    from_state: str
-    to_state: str
+    entities: list[str]
+    states: list[str]
+    priorities: list[str]
+    transitions: list[TransitionDict]
 
 
 class OptionsDict(TypedDict, total=False):
@@ -29,23 +24,11 @@ class OptionsDict(TypedDict, total=False):
 
     lock_entities: bool
     display_prefix: str
+    default_priority: str
 
 
-class ConfigDict(TypedDict):
+class ConfigDict(TypedDict, total=False):
     """Type definition for full system configuration."""
 
-    db_path: str
-    entities: list[EntityDict]
-    states: list[StateDict]
-    transitions: list[TransitionDict]
+    schema: SchemaDict
     options: OptionsDict
-
-
-EntityList = list[EntityDict]
-"""List of entity configurations."""
-
-StateList = list[StateDict]
-"""List of state configurations."""
-
-TransitionList = list[TransitionDict]
-"""List of transition configurations."""

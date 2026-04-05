@@ -31,8 +31,10 @@ class TestMigrations(BlinkDeskTestCase):
             seed_db_from_dict(
                 self.db_path,
                 {
-                    "entities": ["alice"],
-                    "states": ["open"],
+                    "schema": {
+                        "entities": ["alice"],
+                        "states": ["open"],
+                    },
                     "options": {"default_priority": "urgent"},
                 },
             )

@@ -194,38 +194,22 @@ BlinkDesk's MCP server lets you connect AI assistant with the ticketing directly
 Setup
 -----
 
-Create a minimal schema file to define your states and entities:
+Create a minimal schema file to define your workflow and options:
 
 ```bash
 cat > schema.toml << 'EOF'
-[[entities]]
-slug = "ai"
-name = "AI Assistant"
+[schema]
+entities = ["ai", "alice"]
+states = ["open", "in_progress", "closed"]
+transitions = [
+  { from = "open", to = "in_progress" },
+  { from = "in_progress", to = "closed" },
+]
 
-[[entities]]
-slug = "alice"
-name = "Alice"
-
-[[states]]
-slug = "open"
-name = "Open"
-
-[[states]]
-slug = "in_progress"
-name = "In Progress"
-
-[[states]]
-slug = "closed"
-name = "Closed"
-
-# Who can move to what
-[[transitions]]
-from_state = "open"
-to_state = "in_progress"
-
-[[transitions]]
-from_state = "in_progress"
-to_state = "closed"
+[options]
+display_prefix = "BD-"
+lock_entities = false
+default_priority = "normal"
 EOF
 
 bd -d tickets.db init schema.toml
