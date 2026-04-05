@@ -48,7 +48,7 @@ def init_db(db_path: str) -> sqlite3.Connection:
     return conn
 
 
-def seed_db(db_path: str, config_path: str) -> None:
+def seed_db_from_toml(db_path: str, config_path: str) -> None:
     """Seed the database from a TOML schema file.
 
     Args:
@@ -67,36 +67,7 @@ def seed_db(db_path: str, config_path: str) -> None:
         config = tomllib.load(f)
 
     logger.info("Seeding database from schema file: %s", config_path)
-
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    try:
-        with conn:
-            schema = config.get("schema", {})
-            options = config.get("options", {})
-
-            if not isinstance(schema, dict):
-                schema = {}
-            if not isinstance(options, dict):
-                options = {}
-
-            _validate_schema_section(schema)
-
-            entities = schema.get("entities", [])
-            states = schema.get("states", [])
-            _seed_entities(conn, entities)
-            _seed_states(conn, states)
-            _seed_priorities(
-                conn,
-                schema.get("priorities", []),
-                options.get("default_priority", "normal"),
-            )
-            _seed_transitions(conn, schema.get("transitions", []))
-            _seed_options(conn, options)
-            set_schema_version(conn, CURRENT_SCHEMA_VERSION)
-            logger.info("Seeded database from schema file")
-    finally:
-        conn.close()
+    seed_db_from_dict(db_path, config)
 
 
 def seed_db_from_dict(db_path: str, data: dict[str, Any]) -> None:

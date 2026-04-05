@@ -7,7 +7,7 @@ import sys
 
 from blinkdesk import init_db
 from ._helpers import _get_database_path
-from blinkdesk.init import seed_db
+from blinkdesk.init import seed_db_from_toml
 
 
 _AUTO_VACUUM_MODE_TO_VALUE = {
@@ -117,7 +117,7 @@ def cmd_init(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     try:
-        seed_db(db_path, config_path)
+        seed_db_from_toml(db_path, config_path)
         print(f"Database initialized: {db_path}")
     except Exception as e:
         os.remove(db_path)

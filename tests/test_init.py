@@ -1,11 +1,59 @@
+import os
 import sqlite3
 
 from blinkdesk import init_db
-from blinkdesk.init import seed_db_from_dict
+from blinkdesk.init import seed_db_from_dict, seed_db_from_toml
 from tests._base import BlinkDeskTestCase
 
 
 class TestInit(BlinkDeskTestCase):
+    def test_seed_db_from_toml_reads_schema_section(self) -> None:
+        init_db(self.db_path)
+        schema_path = f"{self.temp_dir}/schema.toml"
+
+        with open(schema_path, "w", encoding="utf-8") as schema_file:
+            schema_file.write(
+                """[schema]
+entities = [\"alice\", \"bob\"]
+states = [\"open\", \"closed\"]
+priorities = [\"low\", \"normal\", \"high\"]
+
+[[schema.transitions]]
+from = \"open\"
+to = \"closed\"
+
+[options]
+display_prefix = \"BD-\"
+lock_entities = false
+default_priority = \"normal\"
+"""
+            )
+
+        seed_db_from_toml(self.db_path, schema_path)
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            entities = conn.execute(
+                "SELECT slug FROM entities ORDER BY entity_id"
+            ).fetchall()
+            states = conn.execute(
+                "SELECT slug FROM ticket_states ORDER BY state_id"
+            ).fetchall()
+            transitions = conn.execute(
+                "SELECT COUNT(*) FROM state_transitions"
+            ).fetchone()[0]
+            display_prefix = conn.execute(
+                "SELECT value FROM config WHERE key = 'display_prefix'"
+            ).fetchone()[0]
+
+            self.assertEqual([row[0] for row in entities], ["alice", "bob"])
+            self.assertEqual([row[0] for row in states], ["open", "closed"])
+            self.assertEqual(transitions, 1)
+            self.assertEqual(display_prefix, "BD-")
+        finally:
+            conn.close()
+            os.remove(schema_path)
+
     def test_seed_db_from_dict_reads_schema_section(self) -> None:
         init_db(self.db_path)
 
