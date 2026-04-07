@@ -64,8 +64,8 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
             assignee_slug=args.assignee,
             priority_slug=args.priority,
             category_slug=args.category,
-            after_id=getattr(args, "after_id", None),
-            limit=getattr(args, "limit", None),
+            after_id=args.after_id,
+            limit=args.limit,
         )
         prefix = system.display_prefix
         data = [
@@ -145,7 +145,7 @@ def cmd_ticket_comment(args: argparse.Namespace) -> None:
         ticket = system.add_comment(
             args.ticket_id,
             args.comment,
-            new_state_slug=getattr(args, "state", None),
+            new_state_slug=args.state,
             operator=args.operator,
         )
         ticket_id = system.format_ticket_id(ticket.id)
