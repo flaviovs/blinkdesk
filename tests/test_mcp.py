@@ -148,6 +148,52 @@ class TestMcp(BlinkDeskTestCase):
             with self.assertRaises(TypeError):
                 find_tickets(offset=1)
 
+    def test_find_tickets_filters_by_priority_and_category(self) -> None:
+        data = {
+            "states": ["open"],
+            "priorities": ["normal", "high"],
+            "categories": ["support", "ops"],
+        }
+        system = self._init_system(data)
+        support = system.create_ticket("Support", priority_slug="high")
+        ops = system.create_ticket("Ops", priority_slug="normal")
+        system.set_ticket_category(support.id, "support")
+        system.set_ticket_category(ops.id, "ops")
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            find_tickets = mcp.tools["find_tickets"]
+
+            tickets = find_tickets(priority="high", category="support")
+            self.assertEqual([t["title"] for t in tickets], ["Support"])
+
     def test_mcp_category_tools_and_set_ticket_category(self) -> None:
         data = {
             "states": ["open"],

@@ -14,6 +14,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 - Add optional ticket categories (`schema.categories`) across Python API, CLI, and MCP, including ticket set/remove operations plus `bd category delete --force` with per-ticket log entries when categories are cleared
 - Ticket mutation operations now accept an optional operator entity (`-o/--operator` in CLI and `operator` in MCP/Python API), record that operator in ticket logs and library logs, and support `config require_operator` to enforce operator presence
 - Ticket listing now supports cursor pagination with `after_id` and `limit` across Python API, CLI (`bd ticket list --after-id --limit`), and MCP (`find_tickets`)
+- Ticket listing now supports category filtering across Python API (`category_slug`), CLI (`-c/--category`), and MCP (`category`) alongside state/assignee/priority filters
 
 ### Changed
 

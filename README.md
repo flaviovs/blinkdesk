@@ -148,6 +148,12 @@ ticket = system.create_ticket("Fix the login bug", operator="alice")
 ticket = system.get_ticket(42)
 all_tickets = system.list_tickets()
 next_page = system.list_tickets(after_id=42, limit=25)
+filtered = system.list_tickets(
+    state_slug="open",
+    assignee_slug="alice",
+    priority_slug="high",
+    category_slug="support",
+)
 
 # Update title
 updated = system.update_ticket(ticket.id, title="Fixed the login bug", operator="alice")
@@ -249,7 +255,7 @@ What Your Agent Can Do
 
 | Tool | What it does |
 |------|--------------|
-| `ticket_list` | List tickets, optionally filter by state or assignee |
+| `ticket_list` | List tickets, optionally filter by state, assignee, priority, or category |
 | `ticket_get` | Get a specific ticket by ID |
 | `ticket_create` | Create a new ticket |
 | `ticket_update` | Update title, description, state, or assignee |
@@ -295,7 +301,7 @@ bd -d tickets.db init schema.toml    # Initialize with schema
 bd -d tickets.db ticket create --title "Bug fix"
 bd -d tickets.db ticket create --title "Bug fix" --operator alice
 bd -d tickets.db ticket list         # List tickets
-bd -d tickets.db ticket list -s open -a alice   # Filter by state/assignee
+bd -d tickets.db ticket list -s open -a alice -p high -c support   # Filter by state/assignee/priority/category
 bd -d tickets.db ticket list --after-id 100 --limit 25   # Cursor pagination
 bd -d tickets.db ticket set-category 42 -c support
 bd -d tickets.db category delete support --force

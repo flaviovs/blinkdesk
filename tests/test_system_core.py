@@ -260,6 +260,34 @@ class TestSystemCore(BlinkDeskTestCase):
         self.assertEqual(len(tickets), 1)
         self.assertEqual(tickets[0].id, 2)
 
+    def test_list_tickets_filters_by_all_supported_fields(self) -> None:
+        data = {
+            "entities": ["alice", "bob"],
+            "states": ["open", "closed"],
+            "priorities": ["normal", "high"],
+            "categories": ["support", "ops"],
+            "transitions": [{"from": "open", "to": "closed"}],
+        }
+        system = self._init_system(data)
+
+        ticket = system.create_ticket("Matching", priority_slug="high")
+        system.assign_ticket(ticket.id, "alice")
+        system.set_ticket_category(ticket.id, "support")
+
+        other = system.create_ticket("Non-matching", priority_slug="normal")
+        system.assign_ticket(other.id, "bob")
+        system.set_ticket_category(other.id, "ops")
+        system.transition_ticket(other.id, "closed")
+
+        tickets = system.list_tickets(
+            state_slug="open",
+            assignee_slug="alice",
+            priority_slug="high",
+            category_slug="support",
+        )
+
+        self.assertEqual([t.title for t in tickets], ["Matching"])
+
     def test_list_tickets_rejects_invalid_after_id_and_limit(self) -> None:
         data = {
             "states": ["open", "closed"],

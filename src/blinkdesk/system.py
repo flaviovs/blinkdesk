@@ -527,6 +527,7 @@ class TicketingSystem:
         state_slug: str | None = None,
         assignee_slug: str | None = None,
         priority_slug: str | None = None,
+        category_slug: str | None = None,
         after_id: int | None = None,
         limit: int | None = None,
     ) -> list[Ticket]:
@@ -536,6 +537,7 @@ class TicketingSystem:
             state_slug: Optional state slug to filter by.
             assignee_slug: Optional assignee slug to filter by.
             priority_slug: Optional priority slug to filter by.
+            category_slug: Optional category slug to filter by.
             after_id: Optional cursor ticket ID. When provided, only tickets
                 with IDs greater than this value are returned.
             limit: Optional maximum number of tickets to return.
@@ -566,6 +568,9 @@ class TicketingSystem:
         if priority_slug:
             conditions.append("tp.priority_id = ?")
             params.append(self._require_priority_slug(priority_slug).priority_id)
+        if category_slug:
+            conditions.append("t.category_id = ?")
+            params.append(self._require_category_slug(category_slug).category_id)
         if after_id is not None:
             conditions.append("t.ticket_id > ?")
             params.append(after_id)

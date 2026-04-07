@@ -63,6 +63,7 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
             state_slug=args.state,
             assignee_slug=args.assignee,
             priority_slug=args.priority,
+            category_slug=args.category,
             after_id=getattr(args, "after_id", None),
             limit=getattr(args, "limit", None),
         )

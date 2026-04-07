@@ -28,14 +28,17 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
     def find_tickets(
         state: str | None = None,
         assignee: str | None = None,
+        priority: str | None = None,
+        category: str | None = None,
         order: Literal["id-asc", "id-desc", "priority-asc", "priority-desc"] = "id-asc",
         limit: int = 50,
         after_id: int = 0,
     ) -> list[dict[str, Any]]:
         """Use when searching for issue tickets matching specific criteria in the
         ticket tracking system. Returns cursor-paginated list of ticket summaries
-        (id, title, state, priority, assignee). Filter by state slug or assignee slug.
-        Sort by id or priority, ascending or descending."""
+        (id, title, state, priority, assignee). Filter by state, assignee,
+        priority, or category slug. Sort by id or priority, ascending or
+        descending."""
         if limit < 1:
             raise ValueError("limit must be greater than or equal to 1")
 
@@ -44,6 +47,8 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             tickets = system.list_tickets(
                 state_slug=state,
                 assignee_slug=assignee,
+                priority_slug=priority,
+                category_slug=category,
                 after_id=after_id,
             )
 

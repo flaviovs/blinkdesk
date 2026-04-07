@@ -39,6 +39,7 @@ class TestCliTicket(BlinkDeskTestCase):
             state=None,
             assignee=None,
             priority=None,
+            category=None,
             after_id=None,
             limit=None,
         )
@@ -67,6 +68,7 @@ class TestCliTicket(BlinkDeskTestCase):
             state=None,
             assignee=None,
             priority=None,
+            category=None,
             after_id=None,
             limit=None,
         )
@@ -145,6 +147,7 @@ class TestCliTicket(BlinkDeskTestCase):
             state=None,
             assignee=None,
             priority=None,
+            category=None,
             after_id=None,
             limit=None,
         )
@@ -194,6 +197,7 @@ class TestCliTicket(BlinkDeskTestCase):
             state=None,
             assignee=None,
             priority=None,
+            category=None,
             after_id=1,
             limit=1,
         )
@@ -204,6 +208,36 @@ class TestCliTicket(BlinkDeskTestCase):
 
         self.assertEqual(len(output), 1)
         self.assertTrue(str(output[0]["id"]).endswith("2"))
+
+    def test_ticket_list_json_filters_by_category(self) -> None:
+        data = {
+            "states": ["open"],
+            "categories": ["support", "ops"],
+        }
+        system = self._init_system(data)
+        ticket_support = system.create_ticket("Support ticket")
+        ticket_ops = system.create_ticket("Ops ticket")
+        system.set_ticket_category(ticket_support.id, "support")
+        system.set_ticket_category(ticket_ops.id, "ops")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            output_format="json",
+            state=None,
+            assignee=None,
+            priority=None,
+            category="support",
+            after_id=None,
+            limit=None,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_list(args)
+        output = json.loads(out.getvalue())
+
+        self.assertEqual(len(output), 1)
+        self.assertEqual(output[0]["title"], "Support ticket")
+        self.assertEqual(output[0]["category"], "support")
 
     def test_ticket_get_table_includes_logs_and_comments(self) -> None:
         data = {
@@ -927,6 +961,38 @@ class TestCliTicket(BlinkDeskTestCase):
         self.assertEqual(len(output), 1)
         self.assertTrue(str(output[0]["id"]).endswith("2"))
 
+    def test_cli_ticket_list_supports_category_filter(self) -> None:
+        data = {
+            "states": ["open"],
+            "categories": ["support", "ops"],
+        }
+        system = self._init_system(data)
+        support = system.create_ticket("Support")
+        ops = system.create_ticket("Ops")
+        system.set_ticket_category(support.id, "support")
+        system.set_ticket_category(ops.id, "ops")
+
+        out = io.StringIO()
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "list",
+                "--output-format",
+                "json",
+                "--category",
+                "support",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        output = json.loads(out.getvalue())
+        self.assertEqual([ticket["title"] for ticket in output], ["Support"])
+
     def test_ticket_list_fails_for_invalid_after_id(self) -> None:
         data = {
             "states": ["open"],
@@ -939,6 +1005,7 @@ class TestCliTicket(BlinkDeskTestCase):
             state=None,
             assignee=None,
             priority=None,
+            category=None,
             after_id=-1,
             limit=None,
         )
