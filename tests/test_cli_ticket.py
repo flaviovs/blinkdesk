@@ -39,6 +39,8 @@ class TestCliTicket(BlinkDeskTestCase):
             state=None,
             assignee=None,
             priority=None,
+            after_id=None,
+            limit=None,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -65,6 +67,8 @@ class TestCliTicket(BlinkDeskTestCase):
             state=None,
             assignee=None,
             priority=None,
+            after_id=None,
+            limit=None,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -141,6 +145,8 @@ class TestCliTicket(BlinkDeskTestCase):
             state=None,
             assignee=None,
             priority=None,
+            after_id=None,
+            limit=None,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -172,6 +178,32 @@ class TestCliTicket(BlinkDeskTestCase):
 
         self.assertIn("ID:       BD-1", output)
         self.assertNotIn("BD-BD-1", output)
+
+    def test_ticket_list_json_supports_after_id_and_limit(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        system.create_ticket("Ticket 1")
+        system.create_ticket("Ticket 2")
+        system.create_ticket("Ticket 3")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            output_format="json",
+            state=None,
+            assignee=None,
+            priority=None,
+            after_id=1,
+            limit=1,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_list(args)
+        output = json.loads(out.getvalue())
+
+        self.assertEqual(len(output), 1)
+        self.assertTrue(str(output[0]["id"]).endswith("2"))
 
     def test_ticket_get_table_includes_logs_and_comments(self) -> None:
         data = {
@@ -861,6 +893,61 @@ class TestCliTicket(BlinkDeskTestCase):
                     cli_main()
 
         self.assertIn("-d/--database-path", err.getvalue())
+
+    def test_cli_ticket_list_supports_after_id_and_limit(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        system.create_ticket("Ticket 1")
+        system.create_ticket("Ticket 2")
+        system.create_ticket("Ticket 3")
+
+        out = io.StringIO()
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "list",
+                "--output-format",
+                "json",
+                "--after-id",
+                "1",
+                "--limit",
+                "1",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        output = json.loads(out.getvalue())
+        self.assertEqual(len(output), 1)
+        self.assertTrue(str(output[0]["id"]).endswith("2"))
+
+    def test_ticket_list_fails_for_invalid_after_id(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        self._init_system(data)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            output_format="table",
+            state=None,
+            assignee=None,
+            priority=None,
+            after_id=-1,
+            limit=None,
+        )
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with redirect_stderr(err):
+                cmd_ticket_list(args)
+
+        self.assertIn("after_id must be greater than or equal to 0", err.getvalue())
 
     def test_cli_ticket_create_accepts_operator(self) -> None:
         data = {

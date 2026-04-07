@@ -137,6 +137,18 @@ def main() -> None:
     lst.add_argument("-s", "--state", help="Filter by state slug (e.g., open, closed)")
     lst.add_argument("-a", "--assignee", help="Filter by assignee slug")
     lst.add_argument("-p", "--priority", help="Filter by priority slug")
+    lst.add_argument(
+        "--after-id",
+        type=int,
+        default=None,
+        help="List tickets with ID greater than this value",
+    )
+    lst.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Maximum number of tickets to return",
+    )
     lst.set_defaults(func=cmd_ticket_list)
 
     # ticket get

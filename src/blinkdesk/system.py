@@ -527,6 +527,8 @@ class TicketingSystem:
         state_slug: str | None = None,
         assignee_slug: str | None = None,
         priority_slug: str | None = None,
+        after_id: int | None = None,
+        limit: int | None = None,
     ) -> list[Ticket]:
         """List all tickets.
 
@@ -534,10 +536,21 @@ class TicketingSystem:
             state_slug: Optional state slug to filter by.
             assignee_slug: Optional assignee slug to filter by.
             priority_slug: Optional priority slug to filter by.
+            after_id: Optional cursor ticket ID. When provided, only tickets
+                with IDs greater than this value are returned.
+            limit: Optional maximum number of tickets to return.
 
         Returns:
             List of all tickets ordered by ticket_id.
+
+        Raises:
+            ValueError: If after_id is negative or limit is less than 1.
         """
+        if after_id is not None and after_id < 0:
+            raise ValueError("after_id must be greater than or equal to 0")
+        if limit is not None and limit < 1:
+            raise ValueError("limit must be greater than or equal to 1")
+
         query = _TICKET_SELECT_QUERY
         conditions: list[str] = []
         params: list[int | str] = []
@@ -553,10 +566,16 @@ class TicketingSystem:
         if priority_slug:
             conditions.append("tp.priority_id = ?")
             params.append(self._require_priority_slug(priority_slug).priority_id)
+        if after_id is not None:
+            conditions.append("t.ticket_id > ?")
+            params.append(after_id)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
         query += " ORDER BY t.ticket_id"
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
 
         cursor = self._conn.execute(query, params)
         return [self._ticket_from_row(row) for row in cursor.fetchall()]

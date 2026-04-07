@@ -247,6 +247,35 @@ class TestSystemCore(BlinkDeskTestCase):
         self.assertEqual(tickets[0].title, "Ticket 1")
         self.assertEqual(tickets[1].title, "Ticket 2")
 
+    def test_list_tickets_with_after_id_and_limit(self) -> None:
+        data = {
+            "states": ["open", "closed"],
+        }
+        system = self._init_system(data)
+        system.create_ticket("Ticket 1")
+        system.create_ticket("Ticket 2")
+        system.create_ticket("Ticket 3")
+
+        tickets = system.list_tickets(after_id=1, limit=1)
+        self.assertEqual(len(tickets), 1)
+        self.assertEqual(tickets[0].id, 2)
+
+    def test_list_tickets_rejects_invalid_after_id_and_limit(self) -> None:
+        data = {
+            "states": ["open", "closed"],
+        }
+        system = self._init_system(data)
+
+        with self.assertRaisesRegex(
+            ValueError, "after_id must be greater than or equal to 0"
+        ):
+            system.list_tickets(after_id=-1)
+
+        with self.assertRaisesRegex(
+            ValueError, "limit must be greater than or equal to 1"
+        ):
+            system.list_tickets(limit=0)
+
     def test_close(self) -> None:
         data = {
             "states": ["open", "closed"],
