@@ -10,6 +10,12 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- No unreleased changes
+
+## [0.8.0] - 2026-04-07
+
+### Added
+
 - `bd ticket create -m/--description` now accepts `@<path>` to read the description from a file and `-` to read it from stdin
 - Add optional ticket categories (`schema.categories`) across Python API, CLI, and MCP, including ticket set/remove operations plus `bd category delete --force` with per-ticket log entries when categories are cleared
 - Ticket mutation operations now accept an optional operator entity (`-o/--operator` in CLI and `operator` in MCP/Python API), record that operator in ticket logs and library logs, and support `config require_operator` to enforce operator presence
