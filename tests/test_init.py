@@ -202,3 +202,55 @@ default_priority = \"normal\"
             self.assertEqual(value, "0")
         finally:
             conn.close()
+
+    def test_audit_log_defaults_to_true(self) -> None:
+        init_db(self.db_path)
+
+        seed_db_from_dict(
+            self.db_path,
+            {
+                "schema": {
+                    "entities": ["alice"],
+                    "states": ["open"],
+                    "priorities": ["normal"],
+                    "categories": [],
+                    "transitions": [{"from": "open", "to": "open"}],
+                },
+                "options": {"default_priority": "normal"},
+            },
+        )
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            value = conn.execute(
+                "SELECT value FROM config WHERE key = 'audit_log'"
+            ).fetchone()[0]
+            self.assertEqual(value, "1")
+        finally:
+            conn.close()
+
+    def test_audit_prune_keep_days_defaults_to_thirty(self) -> None:
+        init_db(self.db_path)
+
+        seed_db_from_dict(
+            self.db_path,
+            {
+                "schema": {
+                    "entities": ["alice"],
+                    "states": ["open"],
+                    "priorities": ["normal"],
+                    "categories": [],
+                    "transitions": [{"from": "open", "to": "open"}],
+                },
+                "options": {"default_priority": "normal"},
+            },
+        )
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            value = conn.execute(
+                "SELECT value FROM config WHERE key = 'audit_prune_keep_days'"
+            ).fetchone()[0]
+            self.assertEqual(value, "30")
+        finally:
+            conn.close()

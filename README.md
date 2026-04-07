@@ -221,6 +221,7 @@ display_prefix = "BD-"
 lock_entities = false
 default_priority = "normal"
 require_operator = false
+audit_log = true
 EOF
 
 bd -d tickets.db init schema.toml
@@ -307,6 +308,10 @@ bd -d tickets.db ticket set-category 42 -c support
 bd -d tickets.db category delete support --force
 bd -d tickets.db ticket get 42       # View ticket details
 bd -d tickets.db config set require_operator true
+bd -d tickets.db config set audit_log false
+bd -d tickets.db config set audit_prune_keep_days 7
+bd -d tickets.db audit list
+bd -d tickets.db audit prune
 ```
 
 Run `bd --help` or `bd <command> --help` for all available options.

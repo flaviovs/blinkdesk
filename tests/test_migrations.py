@@ -53,6 +53,11 @@ class TestMigrations(BlinkDeskTestCase):
                 "WHERE type = 'table' AND name = 'categories'"
             ).fetchone()
             self.assertIsNotNone(categories)
+            audit_logs = conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type = 'table' AND name = 'audit_logs'"
+            ).fetchone()
+            self.assertIsNotNone(audit_logs)
 
             ticket_cols = conn.execute("PRAGMA table_info(tickets)").fetchall()
             self.assertTrue(any(col[1] == "category_id" for col in ticket_cols))

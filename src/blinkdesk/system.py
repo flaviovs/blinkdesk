@@ -3,10 +3,11 @@
 import logging
 import random
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from blinkdesk.audit import DEFAULT_AUDIT_PRUNE_KEEP_DAYS, SQLiteAuditLogHandler
 from blinkdesk.category import Category
 from blinkdesk.comment import Comment
 from blinkdesk.entity import Entity
@@ -17,6 +18,7 @@ from blinkdesk.ticket import Ticket
 from blinkdesk.ticket_log import TicketLog, TicketLogAction
 
 logger = logging.getLogger(__name__)
+_BLINKDESK_LOGGER_NAME = "blinkdesk"
 
 _TICKET_SELECT_QUERY = """
 SELECT
@@ -51,20 +53,55 @@ class TicketingSystem:
         """
         if not Path(db_path).exists():
             raise FileNotFoundError(f"Database file not found: {db_path}")
+        self._db_path = db_path
         self._conn = sqlite3.connect(db_path)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         run_migrations(self._conn)
         self._state_machine = TicketStateMachine(self._conn)
         self._priority_manager = TicketPriorityManager(self._conn)
+        self._audit_handler: SQLiteAuditLogHandler | None = None
+        self._previous_blinkdesk_logger_level: int | None = None
+        self._configure_audit_logger()
 
     def close(self) -> None:
         """Close the database connection."""
         try:
+            self._teardown_audit_logger()
             if random.random() < 0.01:
                 self._conn.execute("PRAGMA main.incremental_vacuum")
         finally:
             self._conn.close()
+
+    def _configure_audit_logger(self) -> None:
+        """Attach the SQLite audit handler when audit logging is enabled."""
+        if not self.audit_log:
+            return
+        blinkdesk_logger = logging.getLogger(_BLINKDESK_LOGGER_NAME)
+        for existing_handler in blinkdesk_logger.handlers:
+            if (
+                isinstance(existing_handler, SQLiteAuditLogHandler)
+                and existing_handler.db_path == self._db_path
+            ):
+                return
+        self._previous_blinkdesk_logger_level = blinkdesk_logger.level
+        blinkdesk_logger.setLevel(logging.INFO)
+        handler = SQLiteAuditLogHandler(self._db_path)
+        handler.setFormatter(logging.Formatter("%(name)s: %(message)s"))
+        blinkdesk_logger.addHandler(handler)
+        self._audit_handler = handler
+
+    def _teardown_audit_logger(self) -> None:
+        """Detach the SQLite audit handler from the blinkdesk logger."""
+        if self._audit_handler is None:
+            return
+        blinkdesk_logger = logging.getLogger(_BLINKDESK_LOGGER_NAME)
+        blinkdesk_logger.removeHandler(self._audit_handler)
+        if self._previous_blinkdesk_logger_level is not None:
+            blinkdesk_logger.setLevel(self._previous_blinkdesk_logger_level)
+            self._previous_blinkdesk_logger_level = None
+        self._audit_handler.close()
+        self._audit_handler = None
 
     def create_entity(self, slug: str) -> Entity:
         """Create a new entity.
@@ -1186,6 +1223,71 @@ class TicketingSystem:
         """
         value = self.get_config("require_operator")
         return self._config_value_as_bool(value)
+
+    @property
+    def audit_log(self) -> bool:
+        """Check whether persistent audit logging is enabled.
+
+        Returns:
+            True when audit logs should be recorded.
+        """
+        value = self.get_config("audit_log")
+        if value is None:
+            return True
+        return self._config_value_as_bool(value)
+
+    def list_audit_logs(self) -> list[tuple[str, str]]:
+        """List audit log entries ordered from newest to oldest.
+
+        Returns:
+            List of (created_at, line) tuples.
+        """
+        cursor = self._conn.execute(
+            "SELECT created_at, line FROM audit_logs ORDER BY created_at DESC"
+        )
+        return [(row["created_at"], row["line"]) for row in cursor.fetchall()]
+
+    @property
+    def audit_prune_keep_days(self) -> int:
+        """Get audit retention in days.
+
+        Returns:
+            Number of days to keep in the audit log.
+
+        Raises:
+            ValueError: If the configured value is not a valid integer.
+        """
+        value = self.get_config("audit_prune_keep_days")
+        if value is None:
+            return DEFAULT_AUDIT_PRUNE_KEEP_DAYS
+        try:
+            keep_days = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "Invalid config audit_prune_keep_days: must be an integer"
+            ) from exc
+        if keep_days < 0:
+            raise ValueError(
+                "Invalid config audit_prune_keep_days: must be greater "
+                "than or equal to 0"
+            )
+        return keep_days
+
+    def prune_audit_logs(self) -> int:
+        """Delete audit log entries older than the retention period.
+
+        Returns:
+            Number of deleted rows.
+        """
+        keep_days = self.audit_prune_keep_days
+        cutoff = datetime.now(timezone.utc) - timedelta(days=keep_days)
+        cutoff_iso = cutoff.isoformat()
+        with self._conn:
+            cursor = self._conn.execute(
+                "DELETE FROM audit_logs WHERE created_at < ?",
+                (cutoff_iso,),
+            )
+        return cursor.rowcount
 
     def format_ticket_id(self, ticket_id: int) -> str:
         """Format a ticket ID with the display prefix.

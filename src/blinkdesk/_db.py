@@ -144,6 +144,11 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         ) WITHOUT ROWID;
+
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            created_at DATETIME NOT NULL,
+            line TEXT NOT NULL
+        );
         """
     )
     conn.commit()

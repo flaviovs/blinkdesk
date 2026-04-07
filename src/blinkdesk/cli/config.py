@@ -6,7 +6,7 @@ import sys
 from blinkdesk import TicketingSystem
 from ._helpers import _get_database_path
 
-_BOOLEAN_CONFIG_KEYS = {"lock_entities", "require_operator"}
+_BOOLEAN_CONFIG_KEYS = {"lock_entities", "require_operator", "audit_log"}
 
 
 def _format_config_value(key: str, value: str | int) -> str:

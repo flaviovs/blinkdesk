@@ -400,6 +400,69 @@ class TestSystemCore(BlinkDeskTestCase):
         system.set_config("require_operator", 0)
         self.assertFalse(system.require_operator)
 
+    def test_audit_log_property_defaults_to_true_when_unset(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        with system._conn:
+            system._conn.execute("DELETE FROM config WHERE key = 'audit_log'")
+
+        self.assertTrue(system.audit_log)
+
+    def test_audit_logging_writes_rows_when_enabled(self) -> None:
+        data = {
+            "states": ["open"],
+            "options": {"audit_log": True},
+        }
+        system = self._init_system(data)
+        system.create_ticket("Audit me")
+
+        rows = system.list_audit_logs()
+        self.assertTrue(any("Created ticket #" in line for _, line in rows))
+
+    def test_audit_logging_does_not_write_rows_when_disabled(self) -> None:
+        data = {
+            "states": ["open"],
+            "options": {"audit_log": False},
+        }
+        system = self._init_system(data)
+        system.create_ticket("No audit")
+
+        self.assertEqual(system.list_audit_logs(), [])
+
+    def test_audit_prune_keep_days_defaults_to_thirty_when_unset(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        with system._conn:
+            system._conn.execute(
+                "DELETE FROM config WHERE key = 'audit_prune_keep_days'"
+            )
+
+        self.assertEqual(system.audit_prune_keep_days, 30)
+
+    def test_audit_prune_keep_days_must_be_non_negative_integer(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        system.set_config("audit_prune_keep_days", "bad")
+        with self.assertRaisesRegex(
+            ValueError,
+            "Invalid config audit_prune_keep_days: must be an integer",
+        ):
+            _ = system.audit_prune_keep_days
+
+        system.set_config("audit_prune_keep_days", "-1")
+        with self.assertRaisesRegex(
+            ValueError,
+            "Invalid config audit_prune_keep_days: must be greater than or equal to 0",
+        ):
+            _ = system.audit_prune_keep_days
+
     def test_create_ticket_requires_operator_when_enabled(self) -> None:
         data = {
             "states": ["open"],

@@ -12,6 +12,7 @@ from blinkdesk._db import (
     init_db as _init_db,
     set_schema_version,
 )
+from blinkdesk.audit import DEFAULT_AUDIT_PRUNE_KEEP_DAYS
 
 logger = logging.getLogger(__name__)
 
@@ -266,6 +267,18 @@ def _seed_options(conn: sqlite3.Connection, options: dict[str, Any]) -> None:
         conn.execute(
             "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
             ("require_operator", 0),
+        )
+
+    if "audit_log" not in options:
+        conn.execute(
+            "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+            ("audit_log", 1),
+        )
+
+    if "audit_prune_keep_days" not in options:
+        conn.execute(
+            "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+            ("audit_prune_keep_days", str(DEFAULT_AUDIT_PRUNE_KEEP_DAYS)),
         )
 
     logger.info("Seeded config options: count=%d", len(options))

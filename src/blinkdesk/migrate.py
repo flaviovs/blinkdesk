@@ -62,7 +62,7 @@ def _migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
 
 
 def _migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
-    """Migrate from schema v2 to v3: add ticket categories."""
+    """Migrate from schema v2 to v3: add categories and audit logs."""
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS categories (
@@ -79,6 +79,15 @@ def _migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
             "ALTER TABLE tickets ADD COLUMN category_id INTEGER "
             "REFERENCES categories(category_id)"
         )
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            created_at DATETIME NOT NULL,
+            line TEXT NOT NULL
+        )
+        """
+    )
 
 
 _MIGRATIONS = [

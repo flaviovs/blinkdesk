@@ -9,6 +9,7 @@ from .config import (
     cmd_config_list,
     cmd_config_set,
 )
+from .audit import cmd_audit_list, cmd_audit_prune
 from .category import (
     cmd_category_add,
     cmd_category_delete,
@@ -391,6 +392,16 @@ def main() -> None:
     category_rename.add_argument("new_slug", help="New category slug")
     category_rename.set_defaults(func=cmd_category_rename)
 
+    # audit
+    p_audit = subparsers.add_parser("audit", help="Audit log operations")
+    p_audit_sub = p_audit.add_subparsers(dest="audit_command", required=True)
+
+    audit_list = p_audit_sub.add_parser("list", help="List audit logs")
+    audit_list.set_defaults(func=cmd_audit_list)
+
+    audit_prune = p_audit_sub.add_parser("prune", help="Prune old audit logs")
+    audit_prune.set_defaults(func=cmd_audit_prune)
+
     # mcp
     add_mcp_subparser(subparsers)
 
@@ -398,9 +409,12 @@ def main() -> None:
 
     log_level = logging.INFO if args.verbose else logging.WARNING
     logging.basicConfig(
-        level=log_level,
+        level=logging.INFO,
         format="%(name)s: %(message)s",
+        force=True,
     )
+    for handler in logging.getLogger().handlers:
+        handler.setLevel(log_level)
 
     try:
         args.func(args)
