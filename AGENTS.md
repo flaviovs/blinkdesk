@@ -38,6 +38,11 @@ blinkdesk/
 | comments | Ticket comments | (ticket_id, comment_id) PK |
 | config | System configuration | key (PK) |
 
+## Versioning
+
+- Database schema version must not be bumped when schema changes are part of the
+  current unreleased work
+
 ## Essential Commands
 
 ```bash
@@ -81,6 +86,7 @@ bd -d mydb.db mcp stdio
 - Core runtime has no external dependencies
 - Use unittest
 - Run unittest/lint/type/dead-code checks only when Python files (`*.py`) changed
+- Keep Python `import` and `from ... import` statements at module top-level unless strictly necessary
 - Always use type hints
 - Use absolute imports
 - Add Google Standard docstrings to public APIs
@@ -90,9 +96,12 @@ bd -d mydb.db mcp stdio
 
 ## Definition of Done
 
-- Behavior changes have corresponding unit test updates
-- When Python files changed, run relevant `unittest`, `ruff`, `mypy`, and `vulture` checks
-- User-facing behavior changes are documented in CHANGELOG.md
+- Behavior changes have corresponding unit test additions or updates
+- When Python files changed, run `unittest`, `ruff`, `mypy`, and `vulture` checks and fix reported issues
+- CLI behavior changes are manually smoke-tested using a temporary DB under `$VIRTUAL_ENV/tmp`
+- User-facing behavior changes are documented in `CHANGELOG.md`
+- `README.md` is updated when user-facing commands, flags, or workflows change
+- Runtime dependency boundary is preserved (stdlib-only under `src/blinkdesk/`)
 - Changes are scoped to the request; avoid unrelated edits
 
 ## Version Handling
@@ -132,5 +141,8 @@ bd -d mydb.db mcp stdio
 - Avoid creating or switching branches unless explicitly requested.
 - Never run `git push`.
 - Commit only when explicitly requested by the user.
+- Before committing, ensure `README.md` includes user-visible changes.
+- Before committing, ensure documentation matches current code behavior; code
+  is the source of truth.
 - Keep commit titles under 50 characters.
 - Add a body only if strictly necessary; when added, wrap text at 72 columns.
