@@ -55,6 +55,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                         "state": ticket.state.slug,
                         "priority": ticket.priority.slug,
                         "assignee": ticket.assignee.slug if ticket.assignee else None,
+                        "category": ticket.category.slug if ticket.category else None,
                         "_priority_order": ticket.priority.priority_id,
                     }
                 )
@@ -92,6 +93,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 "state": ticket.state.slug,
                 "priority": ticket.priority.slug,
                 "assignee": ticket.assignee.slug if ticket.assignee else None,
+                "category": ticket.category.slug if ticket.category else None,
                 "created_at": ticket.created_at.isoformat(),
                 "updated_at": ticket.updated_at.isoformat(),
             }
@@ -119,6 +121,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 "description": ticket.description,
                 "state": ticket.state.slug,
                 "priority": ticket.priority.slug,
+                "category": ticket.category.slug if ticket.category else None,
             }
         finally:
             system.close()
@@ -145,6 +148,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 "description": ticket.description,
                 "state": ticket.state.slug,
                 "priority": ticket.priority.slug,
+                "category": ticket.category.slug if ticket.category else None,
             }
         finally:
             system.close()
@@ -172,6 +176,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 "id": ticket.id,
                 "title": ticket.title,
                 "state": ticket.state.slug,
+                "category": ticket.category.slug if ticket.category else None,
             }
         finally:
             system.close()
@@ -197,6 +202,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 "id": ticket.id,
                 "title": ticket.title,
                 "assignee": ticket.assignee.slug if ticket.assignee else None,
+                "category": ticket.category.slug if ticket.category else None,
             }
         finally:
             system.close()
@@ -218,6 +224,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 "id": ticket.id,
                 "title": ticket.title,
                 "assignee": None,
+                "category": ticket.category.slug if ticket.category else None,
             }
         finally:
             system.close()
@@ -243,6 +250,9 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                             "title": ticket.title,
                             "state": ticket.state.slug,
                             "priority": ticket.priority.slug,
+                            "category": ticket.category.slug
+                            if ticket.category
+                            else None,
                         }
                     )
                     if len(result) >= limit:
@@ -275,6 +285,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 "id": ticket.id,
                 "title": ticket.title,
                 "state": ticket.state.slug,
+                "category": ticket.category.slug if ticket.category else None,
             }
         finally:
             system.close()
@@ -376,6 +387,75 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 "id": ticket.id,
                 "title": ticket.title,
                 "priority": ticket.priority.slug,
+                "category": ticket.category.slug if ticket.category else None,
+            }
+        finally:
+            system.close()
+
+    @mcp.tool()
+    def add_category(slug: str) -> dict[str, Any]:
+        """Use when creating a new ticket category in the ticket tracking
+        system. Categories are optional labels that group tickets."""
+        system = TicketingSystem(database_path)
+        try:
+            category = system.create_category(slug)
+            return {
+                "id": category.category_id,
+                "slug": category.slug,
+            }
+        finally:
+            system.close()
+
+    @mcp.tool()
+    def list_categories() -> list[dict[str, Any]]:
+        """Use when you need all ticket categories. Returns id and slug for
+        each category."""
+        system = TicketingSystem(database_path)
+        try:
+            categories = system.list_categories()
+            return [{"id": c.category_id, "slug": c.slug} for c in categories]
+        finally:
+            system.close()
+
+    @mcp.tool()
+    def delete_category(slug: str) -> dict[str, Any]:
+        """Use when deleting a category by slug. Fails if tickets still use
+        the category."""
+        system = TicketingSystem(database_path)
+        try:
+            category = system.get_category_by_slug(slug)
+            if category is None:
+                raise ValueError(f"Unknown category: {slug}")
+            deleted = system.delete_category(category)
+            if not deleted:
+                raise ValueError(
+                    f"Cannot delete category '{slug}': tickets still use it"
+                )
+            return {"deleted": True, "slug": slug}
+        finally:
+            system.close()
+
+    @mcp.tool()
+    def set_ticket_category(ticket_id: int, category_slug: str) -> dict[str, Any]:
+        """Use when setting/changing the category of an issue ticket in the
+        ticket tracking system. Provide ticket_id and target category slug.
+        Returns the updated ticket. Throws if ticket or category not found."""
+        system = TicketingSystem(database_path)
+        try:
+            ticket = system.get_ticket(ticket_id)
+            if ticket is None:
+                formatted_ticket_id = system.format_ticket_id(ticket_id)
+                raise ValueError(f"Ticket {formatted_ticket_id} not found")
+
+            category = system.get_category_by_slug(category_slug)
+            if category is None:
+                raise ValueError(f"Unknown category: {category_slug}")
+
+            ticket = system.set_ticket_category(ticket, category)
+            return {
+                "id": ticket.id,
+                "title": ticket.title,
+                "category": ticket.category.slug if ticket.category else None,
             }
         finally:
             system.close()

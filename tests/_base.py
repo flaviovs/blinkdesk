@@ -19,7 +19,7 @@ class BlinkDeskTestCase(unittest.TestCase):
 
     def _init_system(self, data: dict[str, Any]) -> TicketingSystem:
         init_db(self.db_path)
-        schema_keys = {"entities", "states", "priorities", "transitions"}
+        schema_keys = {"entities", "states", "priorities", "transitions", "categories"}
 
         if "schema" not in data:
             schema: dict[str, Any] = {
@@ -52,6 +52,10 @@ class BlinkDeskTestCase(unittest.TestCase):
         transitions = schema.get("transitions")
         if not isinstance(transitions, list) or not transitions:
             schema["transitions"] = [{"from": states[0], "to": states[0]}]
+
+        categories = schema.get("categories")
+        if not isinstance(categories, list):
+            schema["categories"] = []
 
         normalized_data["schema"] = schema
 

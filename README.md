@@ -65,11 +65,13 @@ bd -d tickets.db ticket list
 Core Concepts
 ============
 
-**Tickets** track issues, TODO items, bugs, anything - they represent work that needs to be tracked. Each ticket has a title, optional description, a current state, and optionally an assignee.
+**Tickets** track issues, TODO items, bugs, anything - they represent work that needs to be tracked. Each ticket has a title, optional description, a current state, and optionally an assignee and category.
 
 **Entities** are the people, teams, or agents who can own tickets. Think of them as your users or groups. Each entity has a slug (like "alice" or "support-team") and a display name.
 
 **States** are the stages tickets can be in - like TODO, IN_PROGRESS, and DONE. You define these in your schema file, so the workflow matches how your team actually works.
+
+**Categories** are optional labels to group tickets, like "support", "ops", or "backend".
 
 **Comments** let you add discussion to a ticket. Useful for context, updates, or just keeping a record of decisions.
 
@@ -181,6 +183,7 @@ What Else?
 - `get_ticket_log(ticket)` - Full audit trail of changes
 - `get_config(key)` / `set_config(key, value)` - System configuration
 - `list_entities()` - All users/teams
+- `list_categories()` - All categories
 
 That's the basics. Check the code if you need more detail.
 
@@ -201,6 +204,7 @@ cat > schema.toml << 'EOF'
 [schema]
 entities = ["ai", "alice"]
 states = ["open", "in_progress", "closed"]
+categories = ["support", "ops"]
 transitions = [
   { from = "open", to = "in_progress" },
   { from = "in_progress", to = "closed" },
@@ -290,7 +294,8 @@ bd -d tickets.db init schema.toml    # Initialize with schema
 bd -d tickets.db ticket create --title "Bug fix"
 bd -d tickets.db ticket list         # List tickets
 bd -d tickets.db ticket list -s open -a alice   # Filter by state/assignee
-bd -d tickets.db ticket list --slug             # Show slugs instead of names
+bd -d tickets.db ticket set-category 42 -c support
+bd -d tickets.db category delete support --force
 bd -d tickets.db ticket get 42       # View ticket details
 ```
 
@@ -328,7 +333,7 @@ Schema Definition
 
 BlinkDesk uses TOML files to set up your database with the states, entities, and workflow rules you want.
 
-You define your states and entities once at setup time. This keeps the database schema simple and lets you model whatever workflow you need - simple bug tracking, full Kanban, support tickets, personal tasks.
+You define your states, entities, and categories once at setup time. This keeps the database schema simple and lets you model whatever workflow you need - simple bug tracking, full Kanban, support tickets, personal tasks.
 
 See [example.schema.toml](./example.schema.toml) for a complete working example with full documentation of each section.
 

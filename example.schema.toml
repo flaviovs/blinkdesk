@@ -36,6 +36,14 @@ states = ["todo", "in_progress", "done"]
 priorities = ["low", "normal", "high"]
 
 # =============================================================================
+# CATEGORIES
+# =============================================================================
+# Categories are optional labels that group tickets.
+# Keep empty if you don't need categories initially.
+
+categories = []
+
+# =============================================================================
 # TRANSITIONS
 # =============================================================================
 # Transitions define which state changes are allowed. Without a transition

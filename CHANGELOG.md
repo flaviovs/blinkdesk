@@ -11,6 +11,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 ### Added
 
 - `bd ticket create -m/--description` now accepts `@<path>` to read the description from a file and `-` to read it from stdin
+- Add optional ticket categories (`schema.categories`) across Python API, CLI, and MCP, including ticket set/remove operations plus `bd category delete --force` with per-ticket log entries when categories are cleared
 
 ## [0.7.0] - 2026-04-04
 

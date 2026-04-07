@@ -9,6 +9,12 @@ from .config import (
     cmd_config_list,
     cmd_config_set,
 )
+from .category import (
+    cmd_category_add,
+    cmd_category_delete,
+    cmd_category_list,
+    cmd_category_rename,
+)
 from .db import (
     cmd_db_backup,
     cmd_db_get_journal_mode,
@@ -40,7 +46,9 @@ from .ticket import (
     cmd_ticket_create,
     cmd_ticket_get,
     cmd_ticket_list,
+    cmd_ticket_remove_category,
     cmd_ticket_set_priority,
+    cmd_ticket_set_category,
     cmd_ticket_transition,
     cmd_ticket_unassign,
     cmd_ticket_update,
@@ -179,6 +187,19 @@ def main() -> None:
     set_priority.add_argument("ticket_id", type=int, help="Ticket ID")
     set_priority.add_argument("-p", "--priority", required=True, help="Priority slug")
     set_priority.set_defaults(func=cmd_ticket_set_priority)
+
+    # ticket set-category
+    set_category = p_create_sub.add_parser("set-category", help="Set ticket category")
+    set_category.add_argument("ticket_id", type=int, help="Ticket ID")
+    set_category.add_argument("-c", "--category", required=True, help="Category slug")
+    set_category.set_defaults(func=cmd_ticket_set_category)
+
+    # ticket remove-category
+    remove_category = p_create_sub.add_parser(
+        "remove-category", help="Remove ticket category"
+    )
+    remove_category.add_argument("ticket_id", type=int, help="Ticket ID")
+    remove_category.set_defaults(func=cmd_ticket_remove_category)
 
     # db vacuum
     p_db = subparsers.add_parser("db", help="Database operations")
@@ -325,6 +346,31 @@ def main() -> None:
         "-p", "--position", help="New priority position", type=int, default=None
     )
     priority_rename.set_defaults(func=cmd_priority_rename)
+
+    # category
+    p_category = subparsers.add_parser("category", help="Category operations")
+    p_category_sub = p_category.add_subparsers(dest="category_command", required=True)
+
+    category_list = p_category_sub.add_parser("list", help="List all categories")
+    category_list.set_defaults(func=cmd_category_list)
+
+    category_add = p_category_sub.add_parser("add", help="Add a category")
+    category_add.add_argument("slug", help="Category slug")
+    category_add.set_defaults(func=cmd_category_add)
+
+    category_delete = p_category_sub.add_parser("delete", help="Delete a category")
+    category_delete.add_argument("slug", help="Category slug")
+    category_delete.add_argument(
+        "--force",
+        action="store_true",
+        help="Remove this category from all tickets before deleting",
+    )
+    category_delete.set_defaults(func=cmd_category_delete)
+
+    category_rename = p_category_sub.add_parser("rename", help="Rename a category")
+    category_rename.add_argument("old_slug", help="Current category slug")
+    category_rename.add_argument("new_slug", help="New category slug")
+    category_rename.set_defaults(func=cmd_category_rename)
 
     # mcp
     add_mcp_subparser(subparsers)

@@ -6,6 +6,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from blinkdesk.category import Category
 from blinkdesk.comment import Comment
 from blinkdesk.entity import Entity
 from blinkdesk.migrate import run_migrations
@@ -19,14 +20,17 @@ logger = logging.getLogger(__name__)
 _TICKET_SELECT_QUERY = """
 SELECT
     t.ticket_id, t.title, t.description, t.state_id, t.priority_id,
-    t.assignee_entity_id, t.created_at, t.updated_at,
+    t.assignee_entity_id, t.category_id, t.created_at, t.updated_at,
     e.entity_id, e.slug AS entity_slug,
+    c.category_id AS category_id_new,
+    c.slug AS category_slug,
     ts.state_id AS state_id_new,
     ts.slug AS state_slug,
     tp.priority_id AS priority_id_new,
     tp.slug AS priority_slug
 FROM tickets t
 LEFT JOIN entities e ON t.assignee_entity_id = e.entity_id
+LEFT JOIN categories c ON t.category_id = c.category_id
 JOIN ticket_states ts ON t.state_id = ts.state_id
 LEFT JOIN ticket_priorities tp ON t.priority_id = tp.priority_id
 """
@@ -84,6 +88,26 @@ class TicketingSystem:
             slug=slug,
         )
 
+    def create_category(self, slug: str) -> Category:
+        """Create a new category.
+
+        Args:
+            slug: URL-friendly slug for the category.
+
+        Returns:
+            The created Category.
+        """
+        with self._conn:
+            cursor = self._conn.execute(
+                "INSERT INTO categories (slug) VALUES (?)",
+                (slug,),
+            )
+        last_id = cursor.lastrowid
+        if last_id is None:
+            raise ValueError("Failed to create category")
+        logger.info("Created category: %s", slug)
+        return Category(category_id=last_id, slug=slug)
+
     def get_entity(self, entity_id: int) -> Entity | None:
         """Get an entity by ID.
 
@@ -131,6 +155,82 @@ class TicketingSystem:
         )
         return [Entity.from_row(row) for row in cursor.fetchall()]
 
+    def get_category(self, category_id: int) -> Category | None:
+        """Get a category by ID.
+
+        Args:
+            category_id: ID of the category.
+
+        Returns:
+            The Category if found, None otherwise.
+        """
+        cursor = self._conn.execute(
+            "SELECT category_id, slug FROM categories WHERE category_id = ?",
+            (category_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return Category.from_row(row)
+
+    def get_category_by_slug(self, slug: str) -> Category | None:
+        """Get a category by slug.
+
+        Args:
+            slug: Slug of the category.
+
+        Returns:
+            The Category if found, None otherwise.
+        """
+        cursor = self._conn.execute(
+            "SELECT category_id, slug FROM categories WHERE slug = ?",
+            (slug,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return Category.from_row(row)
+
+    def list_categories(self) -> list[Category]:
+        """List all categories.
+
+        Returns:
+            List of all categories ordered by category_id.
+        """
+        cursor = self._conn.execute(
+            "SELECT category_id, slug FROM categories ORDER BY category_id"
+        )
+        return [Category.from_row(row) for row in cursor.fetchall()]
+
+    def rename_category(self, old_slug: str, new_slug: str) -> Category:
+        """Rename a category.
+
+        Args:
+            old_slug: Current slug of the category.
+            new_slug: New slug for the category.
+
+        Returns:
+            The updated Category.
+
+        Raises:
+            ValueError: If category not found or new slug already exists.
+        """
+        category = self.get_category_by_slug(old_slug)
+        if category is None:
+            raise ValueError(f"Category not found: {old_slug}")
+        if old_slug != new_slug:
+            existing = self.get_category_by_slug(new_slug)
+            if existing is not None:
+                raise ValueError(f"Category already exists: {new_slug}")
+
+        with self._conn:
+            self._conn.execute(
+                "UPDATE categories SET slug = ? WHERE category_id = ?",
+                (new_slug, category.category_id),
+            )
+        logger.info("Renamed category: %s -> %s", old_slug, new_slug)
+        return Category(category_id=category.category_id, slug=new_slug)
+
     def delete_entity(self, entity: Entity) -> bool:
         """Delete an entity if it's not assigned to any tickets.
 
@@ -152,6 +252,53 @@ class TicketingSystem:
             )
             return False
         logger.info("Deleted entity: %s", entity.slug)
+        return True
+
+    def delete_category(self, category: Category, force: bool = False) -> bool:
+        """Delete a category, optionally clearing it from linked tickets.
+
+        Args:
+            category: Category to delete.
+            force: When True, remove category from linked tickets first.
+
+        Returns:
+            True if deleted, False if linked tickets exist and force=False.
+        """
+        try:
+            with self._conn:
+                if force:
+                    ticket_rows = self._conn.execute(
+                        "SELECT ticket_id FROM tickets WHERE category_id = ? "
+                        "ORDER BY ticket_id",
+                        (category.category_id,),
+                    ).fetchall()
+                    for row in ticket_rows:
+                        now = datetime.now(timezone.utc).isoformat()
+                        self._conn.execute(
+                            "UPDATE tickets SET category_id = NULL, updated_at = ? "
+                            "WHERE ticket_id = ?",
+                            (now, row["ticket_id"]),
+                        )
+                        self._log_ticket(
+                            row["ticket_id"],
+                            TicketLogAction.UPDATED,
+                            details=(
+                                "category cleared due to forced category "
+                                f"deletion: {category.slug}"
+                            ),
+                        )
+
+                self._conn.execute(
+                    "DELETE FROM categories WHERE category_id = ?",
+                    (category.category_id,),
+                )
+        except sqlite3.IntegrityError:
+            logger.info(
+                "Skipped deleting category %s: category is linked to tickets",
+                category.slug,
+            )
+            return False
+        logger.info("Deleted category: %s", category.slug)
         return True
 
     def _log_ticket(
@@ -198,6 +345,7 @@ class TicketingSystem:
         title: str,
         description: str | None = None,
         priority: TicketPriority | None = None,
+        category: Category | None = None,
     ) -> Ticket:
         """Create a new ticket.
 
@@ -205,6 +353,7 @@ class TicketingSystem:
             title: Title of the ticket.
             description: Optional description of the ticket.
             priority: Optional priority (defaults to "normal").
+            category: Optional category.
 
         Returns:
             The created Ticket.
@@ -228,15 +377,16 @@ class TicketingSystem:
                 """
                 INSERT INTO tickets (
                     title, description, state_id, priority_id,
-                    assignee_entity_id, created_at, updated_at
+                    assignee_entity_id, category_id, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, NULL, ?, ?)
+                VALUES (?, ?, ?, ?, NULL, ?, ?, ?)
                 """,
                 (
                     title,
                     description,
                     initial_state.state_id,
                     priority.priority_id,
+                    category.category_id if category else None,
                     now,
                     now,
                 ),
@@ -253,6 +403,7 @@ class TicketingSystem:
             state=initial_state,
             priority=priority,
             assignee=None,
+            category=category,
             created_at=datetime.fromisoformat(now),
             updated_at=datetime.fromisoformat(now),
         )
@@ -362,6 +513,61 @@ class TicketingSystem:
                 details=f"priority changed to {priority.slug}",
             )
         logger.info("Set priority of ticket #%d to %s", ticket.id, priority.slug)
+        return self.get_ticket(ticket.id)  # type: ignore[return-value]
+
+    def set_ticket_category(self, ticket: Ticket, category: Category) -> Ticket:
+        """Set a ticket's category.
+
+        Args:
+            ticket: Ticket to update.
+            category: New category.
+
+        Returns:
+            The updated Ticket.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        old_slug = ticket.category.slug if ticket.category else "(none)"
+        with self._conn:
+            self._conn.execute(
+                """
+                UPDATE tickets SET category_id = ?, updated_at = ?
+                WHERE ticket_id = ?
+                """,
+                (category.category_id, now, ticket.id),
+            )
+            self._log_ticket(
+                ticket.id,
+                TicketLogAction.UPDATED,
+                details=f"category: {old_slug} => {category.slug}",
+            )
+        logger.info("Set category of ticket #%d to %s", ticket.id, category.slug)
+        return self.get_ticket(ticket.id)  # type: ignore[return-value]
+
+    def remove_ticket_category(self, ticket: Ticket) -> Ticket:
+        """Remove a ticket's category.
+
+        Args:
+            ticket: Ticket to update.
+
+        Returns:
+            The updated Ticket.
+        """
+        old_slug = ticket.category.slug if ticket.category else "(none)"
+        now = datetime.now(timezone.utc).isoformat()
+        with self._conn:
+            self._conn.execute(
+                """
+                UPDATE tickets SET category_id = NULL, updated_at = ?
+                WHERE ticket_id = ?
+                """,
+                (now, ticket.id),
+            )
+            self._log_ticket(
+                ticket.id,
+                TicketLogAction.UPDATED,
+                details=f"category: {old_slug} => (none)",
+            )
+        logger.info("Removed category from ticket #%d", ticket.id)
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
     def assign_ticket(self, ticket: Ticket, entity: Entity) -> Ticket:
@@ -632,6 +838,12 @@ class TicketingSystem:
                 entity_id=row["entity_id"],
                 slug=row["entity_slug"],
             )
+        category: Category | None = None
+        if row["category_id_new"] is not None:
+            category = Category(
+                category_id=row["category_id_new"],
+                slug=row["category_slug"],
+            )
         return Ticket(
             id=row["ticket_id"],
             title=row["title"],
@@ -639,6 +851,7 @@ class TicketingSystem:
             state=state,
             priority=priority,
             assignee=assignee,
+            category=category,
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
         )

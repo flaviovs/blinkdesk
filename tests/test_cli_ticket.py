@@ -11,6 +11,8 @@ from blinkdesk.cli.ticket import (
     cmd_ticket_comment,
     cmd_ticket_get,
     cmd_ticket_list,
+    cmd_ticket_remove_category,
+    cmd_ticket_set_category,
     cmd_ticket_set_priority,
     cmd_ticket_transition,
     cmd_ticket_unassign,
@@ -473,6 +475,60 @@ class TestCliTicket(BlinkDeskTestCase):
             with redirect_stderr(err):
                 cmd_ticket_set_priority(args)
         self.assertIn("Priority not found: missing", err.getvalue())
+
+    def test_ticket_set_category_and_remove_category(self) -> None:
+        data = {
+            "states": ["open"],
+            "categories": ["support"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        set_args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            category="support",
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_set_category(set_args)
+        self.assertIn("Ticket category set:", out.getvalue())
+
+        refreshed = system.get_ticket(ticket.id)
+        assert refreshed is not None
+        assert refreshed.category is not None
+        self.assertEqual(refreshed.category.slug, "support")
+
+        remove_args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_remove_category(remove_args)
+        self.assertIn("Ticket category removed:", out.getvalue())
+
+        refreshed = system.get_ticket(ticket.id)
+        assert refreshed is not None
+        self.assertIsNone(refreshed.category)
+
+    def test_ticket_set_category_fails_when_category_not_found(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            category="missing",
+        )
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with redirect_stderr(err):
+                cmd_ticket_set_category(args)
+        self.assertIn("Category not found: missing", err.getvalue())
 
     def test_ticket_comment_with_state_transition(self) -> None:
         data = {

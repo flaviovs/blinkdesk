@@ -101,3 +101,56 @@ class TestMcp(BlinkDeskTestCase):
         ):
             create_mcp_server(self.db_path)
             self.assertEqual(captured_name, "BlinkDesk")
+
+    def test_mcp_category_tools_and_set_ticket_category(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Initial")
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            add_category = mcp.tools["add_category"]
+            list_categories = mcp.tools["list_categories"]
+            delete_category = mcp.tools["delete_category"]
+            set_ticket_category = mcp.tools["set_ticket_category"]
+
+            created = add_category("support")
+            self.assertEqual(created["slug"], "support")
+
+            categories = list_categories()
+            self.assertEqual([c["slug"] for c in categories], ["support"])
+
+            updated = set_ticket_category(ticket.id, "support")
+            self.assertEqual(updated["category"], "support")
+
+            with self.assertRaises(ValueError):
+                delete_category("support")

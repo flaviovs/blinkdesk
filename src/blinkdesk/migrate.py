@@ -61,9 +61,30 @@ def _migrate_v1_to_v2(conn: sqlite3.Connection) -> None:
     conn.execute("ALTER TABLE ticket_states DROP COLUMN name")
 
 
+def _migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
+    """Migrate from schema v2 to v3: add ticket categories."""
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS categories (
+            category_id INTEGER PRIMARY KEY,
+            slug TEXT COLLATE NOCASE UNIQUE NOT NULL
+        )
+        """
+    )
+
+    ticket_columns = conn.execute("PRAGMA table_info(tickets)").fetchall()
+    has_category_id = any(column[1] == "category_id" for column in ticket_columns)
+    if not has_category_id:
+        conn.execute(
+            "ALTER TABLE tickets ADD COLUMN category_id INTEGER "
+            "REFERENCES categories(category_id)"
+        )
+
+
 MIGRATIONS = [
     (0, _migrate_v0_to_v1),
     (1, _migrate_v1_to_v2),
+    (2, _migrate_v2_to_v3),
 ]
 
 

@@ -17,6 +17,7 @@ class TestInit(BlinkDeskTestCase):
 entities = [\"alice\", \"bob\"]
 states = [\"open\", \"closed\"]
 priorities = [\"low\", \"normal\", \"high\"]
+categories = [\"support\", \"ops\"]
 
 [[schema.transitions]]
 from = \"open\"
@@ -42,12 +43,16 @@ default_priority = \"normal\"
             transitions = conn.execute(
                 "SELECT COUNT(*) FROM state_transitions"
             ).fetchone()[0]
+            categories = conn.execute(
+                "SELECT slug FROM categories ORDER BY category_id"
+            ).fetchall()
             display_prefix = conn.execute(
                 "SELECT value FROM config WHERE key = 'display_prefix'"
             ).fetchone()[0]
 
             self.assertEqual([row[0] for row in entities], ["alice", "bob"])
             self.assertEqual([row[0] for row in states], ["open", "closed"])
+            self.assertEqual([row[0] for row in categories], ["support", "ops"])
             self.assertEqual(transitions, 1)
             self.assertEqual(display_prefix, "BD-")
         finally:
@@ -64,6 +69,7 @@ default_priority = \"normal\"
                     "entities": ["alice", "bob"],
                     "states": ["open", "closed"],
                     "priorities": ["low", "normal", "high"],
+                    "categories": ["support", "ops"],
                     "transitions": [{"from": "open", "to": "closed"}],
                 },
                 "options": {
@@ -85,12 +91,16 @@ default_priority = \"normal\"
             transitions = conn.execute(
                 "SELECT COUNT(*) FROM state_transitions"
             ).fetchone()[0]
+            categories = conn.execute(
+                "SELECT slug FROM categories ORDER BY category_id"
+            ).fetchall()
             display_prefix = conn.execute(
                 "SELECT value FROM config WHERE key = 'display_prefix'"
             ).fetchone()[0]
 
             self.assertEqual([row[0] for row in entities], ["alice", "bob"])
             self.assertEqual([row[0] for row in states], ["open", "closed"])
+            self.assertEqual([row[0] for row in categories], ["support", "ops"])
             self.assertEqual(transitions, 1)
             self.assertEqual(display_prefix, "BD-")
         finally:
@@ -135,9 +145,34 @@ default_priority = \"normal\"
                                 "entities": ["alice"],
                                 "states": ["open"],
                                 "priorities": ["normal"],
+                                "categories": [],
                                 "transitions": [{"from": "open", "to": "open"}],
                                 key: [],
                             },
                             "options": {"default_priority": "normal"},
                         },
                     )
+
+    def test_schema_categories_can_be_empty(self) -> None:
+        init_db(self.db_path)
+
+        seed_db_from_dict(
+            self.db_path,
+            {
+                "schema": {
+                    "entities": ["alice"],
+                    "states": ["open"],
+                    "priorities": ["normal"],
+                    "categories": [],
+                    "transitions": [{"from": "open", "to": "open"}],
+                },
+                "options": {"default_priority": "normal"},
+            },
+        )
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            categories = conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0]
+            self.assertEqual(categories, 0)
+        finally:
+            conn.close()

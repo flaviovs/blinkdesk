@@ -30,6 +30,10 @@ def _validate_schema_section(schema: dict[str, Any]) -> None:
         if not isinstance(value, list) or not value:
             raise ValueError(f"schema.{key} must be a non-empty list")
 
+    categories = schema.get("categories", [])
+    if not isinstance(categories, list):
+        raise ValueError("schema.categories must be a list")
+
 
 def init_db(db_path: str) -> sqlite3.Connection:
     """Initialize a new database.
@@ -103,6 +107,7 @@ def seed_db_from_dict(db_path: str, data: dict[str, Any]) -> None:
                 schema.get("priorities", []),
                 options.get("default_priority", "normal"),
             )
+            _seed_categories(conn, schema.get("categories", []))
             _seed_transitions(conn, schema.get("transitions", []))
             _seed_options(conn, options)
             set_schema_version(conn, CURRENT_SCHEMA_VERSION)
@@ -216,6 +221,22 @@ def _seed_transitions(
         )
     if transitions:
         logger.info("Seeded transitions: count=%d", len(transitions))
+
+
+def _seed_categories(conn: sqlite3.Connection, categories: list[str]) -> None:
+    """Seed categories from config.
+
+    Args:
+        conn: Database connection.
+        categories: List of category slugs.
+    """
+    for slug in categories:
+        conn.execute(
+            "INSERT INTO categories (slug) VALUES (?)",
+            (slug,),
+        )
+    if categories:
+        logger.info("Seeded categories: count=%d", len(categories))
 
 
 def _seed_options(conn: sqlite3.Connection, options: dict[str, Any]) -> None:

@@ -87,6 +87,7 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
                 "state": t.state.slug,
                 "priority": t.priority.slug,
                 "assignee": t.assignee.slug if t.assignee else None,
+                "category": t.category.slug if t.category else None,
                 "created_at": t.created_at.isoformat(),
                 "updated_at": t.updated_at.isoformat(),
                 "description": t.description,
@@ -124,6 +125,7 @@ def cmd_ticket_get(args: argparse.Namespace) -> None:
             "state": ticket.state.slug,
             "priority": ticket.priority.slug,
             "assignee": ticket.assignee.slug if ticket.assignee else None,
+            "category": ticket.category.slug if ticket.category else None,
             "created_at": ticket.created_at.isoformat(),
             "updated_at": ticket.updated_at.isoformat(),
             "description": ticket.description,
@@ -258,5 +260,46 @@ def cmd_ticket_set_priority(args: argparse.Namespace) -> None:
         ticket = system.set_ticket_priority(ticket, priority)
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Ticket priority set: {ticket_id}")
+    finally:
+        system.close()
+
+
+def cmd_ticket_set_category(args: argparse.Namespace) -> None:
+    """Set a ticket's category."""
+    db_path = _get_database_path(args)
+    system = TicketingSystem(db_path)
+    try:
+        ticket = system.get_ticket(args.ticket_id)
+        if ticket is None:
+            ticket_id = system.format_ticket_id(args.ticket_id)
+            print(f"Ticket not found: {ticket_id}", file=sys.stderr)
+            sys.exit(1)
+
+        category = system.get_category_by_slug(args.category)
+        if category is None:
+            print(f"Category not found: {args.category}", file=sys.stderr)
+            sys.exit(1)
+
+        ticket = system.set_ticket_category(ticket, category)
+        ticket_id = system.format_ticket_id(ticket.id)
+        print(f"Ticket category set: {ticket_id}")
+    finally:
+        system.close()
+
+
+def cmd_ticket_remove_category(args: argparse.Namespace) -> None:
+    """Remove a ticket's category."""
+    db_path = _get_database_path(args)
+    system = TicketingSystem(db_path)
+    try:
+        ticket = system.get_ticket(args.ticket_id)
+        if ticket is None:
+            ticket_id = system.format_ticket_id(args.ticket_id)
+            print(f"Ticket not found: {ticket_id}", file=sys.stderr)
+            sys.exit(1)
+
+        ticket = system.remove_ticket_category(ticket)
+        ticket_id = system.format_ticket_id(ticket.id)
+        print(f"Ticket category removed: {ticket_id}")
     finally:
         system.close()

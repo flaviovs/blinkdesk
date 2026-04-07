@@ -36,6 +36,7 @@ def _format_table(
         print(f"State:    {t['state']}")
         print(f"Priority: {t['priority']}")
         print(f"Assignee: {t['assignee'] or '(none)'}")
+        print(f"Category: {t['category'] or '(none)'}")
         print(f"Created:  {t['created_at']}")
         print(f"Updated:  {t['updated_at']}")
         if t["description"]:
@@ -46,15 +47,19 @@ def _format_table(
         print("No tickets found.")
         return
 
-    print(f"{'ID':<5} {'Title':<30} {'State':<12} {'Priority':<10} {'Assignee'}")
-    print("-" * 75)
+    print(
+        f"{'ID':<5} {'Title':<24} {'State':<12} {'Priority':<10} "
+        f"{'Assignee':<12} {'Category'}"
+    )
+    print("-" * 90)
     for t in tickets:
         assignee = t["assignee"] or "-"
-        title = t["title"][:27] + "..." if len(t["title"]) > 30 else t["title"]
+        category = t["category"] or "-"
+        title = t["title"][:21] + "..." if len(t["title"]) > 24 else t["title"]
         ticket_id = f"{prefix}{t['id']}" if prefix else str(t["id"])
         print(
-            f"{ticket_id:<5} {title:<30} {t['state']:<12} "
-            f"{t['priority']:<10} {assignee}"
+            f"{ticket_id:<5} {title:<24} {t['state']:<12} "
+            f"{t['priority']:<10} {assignee:<12} {category}"
         )
 
 

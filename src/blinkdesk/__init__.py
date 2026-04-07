@@ -3,6 +3,7 @@
 __version__ = "0.7.0"
 
 from blinkdesk.comment import Comment
+from blinkdesk.category import Category
 from blinkdesk.entity import Entity
 from blinkdesk.init import init_db
 from blinkdesk.priority import TicketPriority, TicketPriorityManager
@@ -22,5 +23,6 @@ __all__ = [
     "TicketLog",
     "TicketLogAction",
     "Comment",
+    "Category",
     "init_db",
 ]

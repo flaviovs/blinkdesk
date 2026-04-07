@@ -459,3 +459,89 @@ class TestSystemCore(BlinkDeskTestCase):
         assert refreshed is not None
         self.assertEqual(refreshed.state.slug, "open")
         self.assertEqual(system.get_ticket_comments(ticket), [])
+
+    def test_category_crud_and_ticket_assignment(self) -> None:
+        data = {
+            "states": ["open"],
+            "categories": ["support"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+
+        created = system.create_category("ops")
+        self.assertEqual(created.slug, "ops")
+
+        categories = system.list_categories()
+        self.assertEqual([c.slug for c in categories], ["support", "ops"])
+
+        support = system.get_category_by_slug("support")
+        assert support is not None
+        updated = system.set_ticket_category(ticket, support)
+        assert updated.category is not None
+        self.assertEqual(updated.category.slug, "support")
+
+        removed = system.remove_ticket_category(updated)
+        self.assertIsNone(removed.category)
+
+    def test_set_ticket_category_logs_old_to_new(self) -> None:
+        data = {
+            "states": ["open"],
+            "categories": ["frontend", "backend"],
+        }
+        system = self._init_system(data)
+        ticket = system.create_ticket("Test")
+        frontend = system.get_category_by_slug("frontend")
+        backend = system.get_category_by_slug("backend")
+        assert frontend is not None
+        assert backend is not None
+
+        ticket = system.set_ticket_category(ticket, frontend)
+        ticket = system.set_ticket_category(ticket, backend)
+
+        logs = system.get_ticket_logs(ticket)
+        self.assertTrue(
+            any(log.details == "category: (none) => frontend" for log in logs)
+        )
+        self.assertTrue(
+            any(log.details == "category: frontend => backend" for log in logs)
+        )
+
+    def test_delete_category_force_clears_tickets_and_logs(self) -> None:
+        data = {
+            "states": ["open"],
+            "categories": ["support"],
+        }
+        system = self._init_system(data)
+        category = system.get_category_by_slug("support")
+        assert category is not None
+        ticket_a = system.create_ticket("A")
+        ticket_b = system.create_ticket("B")
+        system.set_ticket_category(ticket_a, category)
+        system.set_ticket_category(ticket_b, category)
+
+        deleted = system.delete_category(category, force=True)
+        self.assertTrue(deleted)
+
+        refreshed_a = system.get_ticket(ticket_a.id)
+        refreshed_b = system.get_ticket(ticket_b.id)
+        assert refreshed_a is not None
+        assert refreshed_b is not None
+        self.assertIsNone(refreshed_a.category)
+        self.assertIsNone(refreshed_b.category)
+
+        logs_a = system.get_ticket_logs(refreshed_a)
+        logs_b = system.get_ticket_logs(refreshed_b)
+        self.assertTrue(
+            any(
+                log.details
+                == "category cleared due to forced category deletion: support"
+                for log in logs_a
+            )
+        )
+        self.assertTrue(
+            any(
+                log.details
+                == "category cleared due to forced category deletion: support"
+                for log in logs_b
+            )
+        )

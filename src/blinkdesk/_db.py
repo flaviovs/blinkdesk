@@ -6,7 +6,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 
 def get_schema_version(conn: sqlite3.Connection) -> int:
@@ -97,6 +97,11 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             slug TEXT COLLATE NOCASE UNIQUE NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS categories (
+            category_id INTEGER PRIMARY KEY,
+            slug TEXT COLLATE NOCASE UNIQUE NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS state_transitions (
             from_state_id INTEGER REFERENCES ticket_states(state_id),
             to_state_id INTEGER REFERENCES ticket_states(state_id),
@@ -110,6 +115,7 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             state_id INTEGER REFERENCES ticket_states(state_id),
             priority_id INTEGER REFERENCES ticket_priorities(priority_id),
             assignee_entity_id INTEGER REFERENCES entities(entity_id),
+            category_id INTEGER REFERENCES categories(category_id),
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL
         );
