@@ -228,6 +228,10 @@ class TestCliTicket(BlinkDeskTestCase):
         self.assertIn("comments", output)
         self.assertEqual(len(output["logs"]), 1)
         self.assertEqual(len(output["comments"]), 1)
+        self.assertIn("operator", output["logs"][0])
+        self.assertNotIn("entity", output["logs"][0])
+        self.assertIn("operator", output["comments"][0])
+        self.assertNotIn("entity", output["comments"][0])
         self.assertEqual(output["comments"][0]["comment"], "Test comment")
 
     def test_ticket_get_json_excludes_logs(self) -> None:

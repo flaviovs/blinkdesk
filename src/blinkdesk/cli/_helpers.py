@@ -73,7 +73,7 @@ def _log_to_dict(log: TicketLog) -> dict[str, Any]:
     return {
         "ticket_log_id": log.ticket_log_id,
         "ticket_id": log.ticket_id,
-        "entity": log.entity.slug if log.entity else None,
+        "operator": log.entity.slug if log.entity else None,
         "action": log.action.value,
         "details": log.details,
         "created_at": log.created_at.isoformat(),
@@ -85,7 +85,7 @@ def _comment_to_dict(comment: Comment) -> dict[str, Any]:
     return {
         "comment_id": comment.comment_id,
         "ticket_id": comment.ticket_id,
-        "entity": comment.entity.slug if comment.entity else None,
+        "operator": comment.entity.slug if comment.entity else None,
         "comment": comment.comment,
         "new_state": comment.new_state.slug if comment.new_state else None,
         "created_at": comment.created_at.isoformat(),

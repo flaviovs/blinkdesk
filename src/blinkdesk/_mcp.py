@@ -271,7 +271,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
     @mcp.tool()
     def get_ticket_comments(ticket_id: int) -> list[dict[str, Any]]:
         """Use when you need to see all comments on an issue ticket. Returns
-        chronologically ordered list with author and timestamp. Throws if ticket
+        chronologically ordered list with operator and timestamp. Throws if ticket
         not found."""
         system = TicketingSystem(database_path)
         try:
@@ -279,7 +279,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             return [
                 {
                     "id": c.comment_id,
-                    "author": c.entity.slug if c.entity else None,
+                    "operator": c.entity.slug if c.entity else None,
                     "text": c.comment,
                     "created_at": c.created_at.isoformat(),
                 }
@@ -299,7 +299,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             return [
                 {
                     "action": log.action,
-                    "entity": log.entity.slug if log.entity else None,
+                    "operator": log.entity.slug if log.entity else None,
                     "created_at": log.created_at.isoformat(),
                 }
                 for log in logs
@@ -421,7 +421,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
     @mcp.tool()
     def find_entities(search: str | None = None) -> list[dict[str, Any]]:
         """Use when you need to list users or teams in the ticket tracking system.
-        Entities are users or teams that can be assigned issue tickets or author
+        Entities are users or teams that can be assigned issue tickets or add
         comments. Returns id and slug. Optionally filter by search term."""
         system = TicketingSystem(database_path)
         try:

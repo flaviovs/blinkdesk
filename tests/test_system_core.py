@@ -381,22 +381,22 @@ class TestSystemCore(BlinkDeskTestCase):
         self.assertEqual(logs[0].entity, operator)
         self.assertTrue(any("(alice)" in msg for msg in cm.output))
 
-    def test_add_comment_uses_operator_as_comment_author(self) -> None:
+    def test_add_comment_uses_operator_as_comment_actor(self) -> None:
         data = {
             "entities": ["alice"],
             "states": ["open"],
             "options": {"require_operator": "true"},
         }
         system = self._init_system(data)
-        author = system.get_entity_by_slug("alice")
-        assert author is not None
+        operator = system.get_entity_by_slug("alice")
+        assert operator is not None
 
-        ticket = system.create_ticket("Test", operator=author.slug)
-        updated = system.add_comment(ticket.id, "hello", operator=author.slug)
+        ticket = system.create_ticket("Test", operator=operator.slug)
+        updated = system.add_comment(ticket.id, "hello", operator=operator.slug)
         comments = system.get_ticket_comments(updated.id)
 
         self.assertEqual(len(comments), 1)
-        self.assertEqual(comments[0].entity, author)
+        self.assertEqual(comments[0].entity, operator)
 
     def test_add_and_get_comment(self) -> None:
         data = {
