@@ -5,6 +5,7 @@ import random
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from blinkdesk.category import Category
 from blinkdesk.comment import Comment
@@ -1087,7 +1088,7 @@ class TicketingSystem:
             updated_at=datetime.fromisoformat(row["updated_at"]),
         )
 
-    def get_config(self, key: str) -> str | None:
+    def get_config(self, key: str) -> str | int | None:
         """Get a config value from the database.
 
         Args:
@@ -1100,7 +1101,7 @@ class TicketingSystem:
         row = cursor.fetchone()
         return row["value"] if row else None
 
-    def set_config(self, key: str, value: str) -> None:
+    def set_config(self, key: str, value: str | int | bool) -> None:
         """Set a config value in the database.
 
         Args:
@@ -1114,6 +1115,24 @@ class TicketingSystem:
             )
         logger.info("Set config value: %s", key)
 
+    @staticmethod
+    def _config_value_as_bool(value: Any) -> bool:
+        """Interpret a config value as a boolean.
+
+        Args:
+            value: Raw config value read from SQLite.
+
+        Returns:
+            Boolean interpretation of the value.
+        """
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, int):
+            return value != 0
+        if isinstance(value, str):
+            return value == "1"
+        return False
+
     @property
     def lock_entities(self) -> bool:
         """Check if entities are locked.
@@ -1122,7 +1141,7 @@ class TicketingSystem:
             True if entities are locked, False otherwise.
         """
         value = self.get_config("lock_entities")
-        return value == "true"
+        return self._config_value_as_bool(value)
 
     @property
     def display_prefix(self) -> str:
@@ -1132,7 +1151,7 @@ class TicketingSystem:
             The display prefix, or empty string if not set.
         """
         value = self.get_config("display_prefix")
-        return value if value else ""
+        return str(value) if value else ""
 
     @property
     def require_operator(self) -> bool:
@@ -1142,7 +1161,7 @@ class TicketingSystem:
             True when ticket mutation calls must provide an operator.
         """
         value = self.get_config("require_operator")
-        return value == "true"
+        return self._config_value_as_bool(value)
 
     def format_ticket_id(self, ticket_id: int) -> str:
         """Format a ticket ID with the display prefix.

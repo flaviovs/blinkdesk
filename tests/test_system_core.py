@@ -259,12 +259,12 @@ class TestSystemCore(BlinkDeskTestCase):
     def test_config_get_set(self) -> None:
         data = {
             "states": ["open", "closed"],
-            "options": {"lock_entities": "true"},
+            "options": {"lock_entities": True},
         }
         system = self._init_system(data)
 
         value = system.get_config("lock_entities")
-        self.assertEqual(value, "true")
+        self.assertEqual(value, "1")
 
         system.set_config("test_key", "test_value")
         value = system.get_config("test_key")
@@ -279,7 +279,7 @@ class TestSystemCore(BlinkDeskTestCase):
         system = self._init_system(data)
 
         with self.assertLogs("blinkdesk.system", level="INFO") as cm:
-            system.set_config("lock_entities", "true")
+            system.set_config("lock_entities", 1)
 
         self.assertTrue(
             any("Set config value: lock_entities" in msg for msg in cm.output)
@@ -324,29 +324,29 @@ class TestSystemCore(BlinkDeskTestCase):
     def test_lock_entities_property(self) -> None:
         data = {
             "states": ["open"],
-            "options": {"lock_entities": "true"},
+            "options": {"lock_entities": True},
         }
         system = self._init_system(data)
         self.assertTrue(system.lock_entities)
 
-        system.set_config("lock_entities", "false")
+        system.set_config("lock_entities", 0)
         self.assertFalse(system.lock_entities)
 
     def test_require_operator_property(self) -> None:
         data = {
             "states": ["open"],
-            "options": {"require_operator": "true"},
+            "options": {"require_operator": True},
         }
         system = self._init_system(data)
         self.assertTrue(system.require_operator)
 
-        system.set_config("require_operator", "false")
+        system.set_config("require_operator", 0)
         self.assertFalse(system.require_operator)
 
     def test_create_ticket_requires_operator_when_enabled(self) -> None:
         data = {
             "states": ["open"],
-            "options": {"require_operator": "true"},
+            "options": {"require_operator": True},
         }
         system = self._init_system(data)
 
@@ -385,7 +385,7 @@ class TestSystemCore(BlinkDeskTestCase):
         data = {
             "entities": ["alice"],
             "states": ["open"],
-            "options": {"require_operator": "true"},
+            "options": {"require_operator": True},
         }
         system = self._init_system(data)
         operator = system.get_entity_by_slug("alice")

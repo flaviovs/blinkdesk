@@ -893,7 +893,7 @@ class TestCliTicket(BlinkDeskTestCase):
         data = {
             "entities": ["alice"],
             "states": ["open"],
-            "options": {"require_operator": "true"},
+            "options": {"require_operator": True},
         }
         self._init_system(data)
 

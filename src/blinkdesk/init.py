@@ -248,7 +248,7 @@ def _seed_options(conn: sqlite3.Connection, options: dict[str, Any]) -> None:
     """
     for key, value in options.items():
         if isinstance(value, bool):
-            value = str(value).lower()
+            value = int(value)
         elif not isinstance(value, str):
             value = str(value)
         conn.execute(
@@ -265,13 +265,13 @@ def _seed_options(conn: sqlite3.Connection, options: dict[str, Any]) -> None:
     if "require_operator" not in options:
         conn.execute(
             "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
-            ("require_operator", "false"),
+            ("require_operator", 0),
         )
 
     logger.info("Seeded config options: count=%d", len(options))
 
 
-def get_config(db_path: str, key: str) -> str | None:
+def get_config(db_path: str, key: str) -> str | int | None:
     """Get a config value from the database.
 
     Args:
@@ -290,7 +290,7 @@ def get_config(db_path: str, key: str) -> str | None:
         conn.close()
 
 
-def set_config(db_path: str, key: str, value: str) -> None:
+def set_config(db_path: str, key: str, value: str | int | bool) -> None:
     """Set a config value in the database.
 
     Args:

@@ -23,7 +23,7 @@ class TestCliConfig(BlinkDeskTestCase):
             cmd_config_set(args)
 
         self.assertIn("Config set: require_operator = true", out.getvalue())
-        self.assertEqual(system.get_config("require_operator"), "true")
+        self.assertEqual(system.get_config("require_operator"), "1")
 
     def test_config_set_require_operator_rejects_non_boolean(self) -> None:
         data = {

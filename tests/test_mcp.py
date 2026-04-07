@@ -159,7 +159,7 @@ class TestMcp(BlinkDeskTestCase):
         data = {
             "entities": ["alice"],
             "states": ["open"],
-            "options": {"require_operator": "true"},
+            "options": {"require_operator": True},
         }
         system = self._init_system(data)
         system.close()

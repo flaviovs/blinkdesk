@@ -199,6 +199,6 @@ default_priority = \"normal\"
             value = conn.execute(
                 "SELECT value FROM config WHERE key = 'require_operator'"
             ).fetchone()[0]
-            self.assertEqual(value, "false")
+            self.assertEqual(value, "0")
         finally:
             conn.close()

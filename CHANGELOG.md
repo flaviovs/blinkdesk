@@ -18,6 +18,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 - **BC BREAK** `TicketingSystem` now validates referenced records during method execution and mutation/list APIs now accept IDs/slugs (for example `ticket_id`, `state_slug`, `assignee_slug`) instead of pre-resolved object instances
 - **BC BREAK** MCP and CLI JSON ticket comment/history payloads now use `operator` for actor fields (replacing `author`/`entity`)
+- Boolean config keys now persist as SQLite numeric booleans (`0`/`1`) while CLI output remains `true`/`false`
 
 ## [0.7.0] - 2026-04-04
 
