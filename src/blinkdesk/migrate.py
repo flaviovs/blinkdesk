@@ -10,7 +10,7 @@ from blinkdesk._db import (
     set_schema_version,
 )
 
-MIGRATIONS: list[tuple[int, Callable[[sqlite3.Connection], None]]] = []
+_MIGRATIONS: list[tuple[int, Callable[[sqlite3.Connection], None]]] = []
 logger = logging.getLogger(__name__)
 
 
@@ -81,7 +81,7 @@ def _migrate_v2_to_v3(conn: sqlite3.Connection) -> None:
         )
 
 
-MIGRATIONS = [
+_MIGRATIONS = [
     (0, _migrate_v0_to_v1),
     (1, _migrate_v1_to_v2),
     (2, _migrate_v2_to_v3),
@@ -107,7 +107,7 @@ def run_migrations(conn: sqlite3.Connection) -> None:
             f"supported version {target}"
         )
 
-    for from_ver, migrate_fn in MIGRATIONS:
+    for from_ver, migrate_fn in _MIGRATIONS:
         if from_ver >= db_version:
             logger.info("Applying migration v%d -> v%d", from_ver, from_ver + 1)
             with conn:

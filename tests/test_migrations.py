@@ -107,7 +107,7 @@ class TestMigrations(BlinkDeskTestCase):
                 connection.execute("INSERT INTO migration_probe (id) VALUES (1)")
                 raise RuntimeError("broken migration")
 
-            with patch.object(migrate_module, "MIGRATIONS", [(0, bad_migration)]):
+            with patch.object(migrate_module, "_MIGRATIONS", [(0, bad_migration)]):
                 with self.assertRaises(RuntimeError):
                     migrate_module.run_migrations(conn)
 
