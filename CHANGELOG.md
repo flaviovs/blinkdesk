@@ -14,6 +14,10 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 - Add optional ticket categories (`schema.categories`) across Python API, CLI, and MCP, including ticket set/remove operations plus `bd category delete --force` with per-ticket log entries when categories are cleared
 - Ticket mutation operations now accept an optional operator entity (`-o/--operator` in CLI and `operator` in MCP/Python API), record that operator in ticket logs and library logs, and support `config require_operator` to enforce operator presence
 
+### Changed
+
+- **BC BREAK** `TicketingSystem` now validates referenced records during method execution and mutation/list APIs now accept IDs/slugs (for example `ticket_id`, `state_slug`, `assignee_slug`) instead of pre-resolved object instances
+
 ## [0.7.0] - 2026-04-04
 
 ### Added

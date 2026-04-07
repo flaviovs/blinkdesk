@@ -45,7 +45,7 @@ class TestCliCategory(BlinkDeskTestCase):
         category = system.get_category_by_slug("support")
         assert category is not None
         ticket = system.create_ticket("Test")
-        system.set_ticket_category(ticket, category)
+        system.set_ticket_category(ticket.id, category.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -67,7 +67,7 @@ class TestCliCategory(BlinkDeskTestCase):
         category = system.get_category_by_slug("support")
         assert category is not None
         ticket = system.create_ticket("Test")
-        system.set_ticket_category(ticket, category)
+        system.set_ticket_category(ticket.id, category.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -82,7 +82,7 @@ class TestCliCategory(BlinkDeskTestCase):
         refreshed = system.get_ticket(ticket.id)
         assert refreshed is not None
         self.assertIsNone(refreshed.category)
-        logs = system.get_ticket_logs(refreshed)
+        logs = system.get_ticket_logs(refreshed.id)
         self.assertTrue(
             any(
                 log.details

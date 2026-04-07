@@ -61,7 +61,7 @@ class TestSystemCore(BlinkDeskTestCase):
         }
         system = self._init_system(data)
         ticket = system.create_ticket("Old title")
-        updated = system.update_ticket(ticket, "New title")
+        updated = system.update_ticket(ticket.id, "New title")
         self.assertEqual(updated.title, "New title")
 
     def test_assign_and_unassign_ticket(self) -> None:
@@ -74,10 +74,10 @@ class TestSystemCore(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        assigned = system.assign_ticket(ticket, entity)
+        assigned = system.assign_ticket(ticket.id, entity.slug)
         self.assertEqual(assigned.assignee, entity)
 
-        unassigned = system.unassign_ticket(assigned)
+        unassigned = system.unassign_ticket(assigned.id)
         self.assertIsNone(unassigned.assignee)
 
     def test_transition_ticket(self) -> None:
@@ -94,7 +94,7 @@ class TestSystemCore(BlinkDeskTestCase):
         in_progress = system.get_state_machine().get_state_by_slug("in_progress")
         assert in_progress is not None
 
-        transitioned = system.transition_ticket(ticket, in_progress)
+        transitioned = system.transition_ticket(ticket.id, in_progress.slug)
         self.assertEqual(transitioned.state.slug, "in_progress")
 
     def test_transition_invalid_raises(self) -> None:
@@ -112,7 +112,7 @@ class TestSystemCore(BlinkDeskTestCase):
         assert closed is not None
 
         with self.assertRaises(ValueError) as ctx:
-            system.transition_ticket(ticket, closed)
+            system.transition_ticket(ticket.id, closed.slug)
         self.assertIn("Invalid transition", str(ctx.exception))
 
     def test_delete_entity_with_tickets_fails(self) -> None:
@@ -125,9 +125,9 @@ class TestSystemCore(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.assign_ticket(ticket, entity)
+        system.assign_ticket(ticket.id, entity.slug)
 
-        result = system.delete_entity(entity)
+        result = system.delete_entity(entity.slug)
         self.assertFalse(result)
 
     def test_delete_entity_without_tickets_succeeds(self) -> None:
@@ -139,7 +139,7 @@ class TestSystemCore(BlinkDeskTestCase):
         entity = system.get_entity_by_slug("alice")
         assert entity is not None
 
-        result = system.delete_entity(entity)
+        result = system.delete_entity(entity.slug)
         self.assertTrue(result)
 
         deleted = system.get_entity(entity.entity_id)
@@ -155,10 +155,10 @@ class TestSystemCore(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        assigned = system.assign_ticket(ticket, entity)
+        assigned = system.assign_ticket(ticket.id, entity.slug)
         self.assertEqual(assigned.assignee, entity)
 
-        unassigned = system.unassign_ticket(assigned)
+        unassigned = system.unassign_ticket(assigned.id)
         self.assertIsNone(unassigned.assignee)
 
     def test_transition_ticket_multiline_duplicate(self) -> None:
@@ -179,7 +179,7 @@ class TestSystemCore(BlinkDeskTestCase):
         in_progress = system.get_state_machine().get_state_by_slug("in_progress")
         assert in_progress is not None
 
-        transitioned = system.transition_ticket(ticket, in_progress)
+        transitioned = system.transition_ticket(ticket.id, in_progress.slug)
         self.assertEqual(transitioned.state.slug, "in_progress")
 
     def test_transition_invalid_raises_multiline_duplicate(self) -> None:
@@ -201,7 +201,7 @@ class TestSystemCore(BlinkDeskTestCase):
         assert closed is not None
 
         with self.assertRaises(ValueError) as ctx:
-            system.transition_ticket(ticket, closed)
+            system.transition_ticket(ticket.id, closed.slug)
         self.assertIn("Invalid transition", str(ctx.exception))
 
     def test_delete_entity_with_tickets_fails_duplicate(self) -> None:
@@ -214,9 +214,9 @@ class TestSystemCore(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.assign_ticket(ticket, entity)
+        system.assign_ticket(ticket.id, entity.slug)
 
-        result = system.delete_entity(entity)
+        result = system.delete_entity(entity.slug)
         self.assertFalse(result)
 
     def test_delete_entity_without_tickets_succeeds_duplicate(self) -> None:
@@ -228,7 +228,7 @@ class TestSystemCore(BlinkDeskTestCase):
         entity = system.get_entity_by_slug("alice")
         assert entity is not None
 
-        result = system.delete_entity(entity)
+        result = system.delete_entity(entity.slug)
         self.assertTrue(result)
 
         deleted = system.get_entity(entity.entity_id)
@@ -316,7 +316,7 @@ class TestSystemCore(BlinkDeskTestCase):
         assert high is not None
 
         ticket = system.create_ticket("Test")
-        system.set_ticket_priority(ticket, high)
+        system.set_ticket_priority(ticket.id, high.slug)
 
         result = system.get_priority_machine().delete_priority(high)
         self.assertFalse(result)
@@ -377,7 +377,7 @@ class TestSystemCore(BlinkDeskTestCase):
         with self.assertLogs("blinkdesk.system", level="INFO") as cm:
             ticket = system.create_ticket("Test", operator=operator.slug)
 
-        logs = system.get_ticket_logs(ticket)
+        logs = system.get_ticket_logs(ticket.id)
         self.assertEqual(logs[0].entity, operator)
         self.assertTrue(any("(alice)" in msg for msg in cm.output))
 
@@ -392,8 +392,8 @@ class TestSystemCore(BlinkDeskTestCase):
         assert author is not None
 
         ticket = system.create_ticket("Test", operator=author.slug)
-        updated = system.add_comment(ticket, "hello", operator=author.slug)
-        comments = system.get_ticket_comments(updated)
+        updated = system.add_comment(ticket.id, "hello", operator=author.slug)
+        comments = system.get_ticket_comments(updated.id)
 
         self.assertEqual(len(comments), 1)
         self.assertEqual(comments[0].entity, author)
@@ -408,9 +408,9 @@ class TestSystemCore(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, "This is a comment", operator=entity.slug)
+        system.add_comment(ticket.id, "This is a comment", operator=entity.slug)
 
-        comments = system.get_ticket_comments(ticket)
+        comments = system.get_ticket_comments(ticket.id)
         self.assertEqual(len(comments), 1)
         self.assertEqual(comments[0].comment, "This is a comment")
         self.assertEqual(comments[0].entity, entity)
@@ -432,13 +432,13 @@ class TestSystemCore(BlinkDeskTestCase):
         assert closed is not None
 
         system.add_comment(
-            ticket,
+            ticket.id,
             "Closing ticket",
-            new_state=closed,
+            new_state_slug=closed.slug,
             operator=entity.slug,
         )
 
-        comments = system.get_ticket_comments(ticket)
+        comments = system.get_ticket_comments(ticket.id)
         self.assertEqual(len(comments), 1)
         self.assertEqual(comments[0].new_state, closed)
 
@@ -452,7 +452,7 @@ class TestSystemCore(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        logs = system.get_ticket_logs(ticket)
+        logs = system.get_ticket_logs(ticket.id)
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0].action.value, "created")
 
@@ -501,7 +501,7 @@ class TestSystemCore(BlinkDeskTestCase):
 
         with patch.object(system, "_log_ticket", side_effect=RuntimeError("boom")):
             with self.assertRaises(RuntimeError):
-                system.update_ticket(ticket, "New title")
+                system.update_ticket(ticket.id, "New title")
 
         fetched = system.get_ticket(ticket.id)
         assert fetched is not None
@@ -525,16 +525,16 @@ class TestSystemCore(BlinkDeskTestCase):
         with patch.object(system, "_log_ticket", side_effect=RuntimeError("boom")):
             with self.assertRaises(RuntimeError):
                 system.add_comment(
-                    ticket,
+                    ticket.id,
                     "Closing ticket",
-                    new_state=closed,
+                    new_state_slug=closed.slug,
                     operator=entity.slug,
                 )
 
         refreshed = system.get_ticket(ticket.id)
         assert refreshed is not None
         self.assertEqual(refreshed.state.slug, "open")
-        self.assertEqual(system.get_ticket_comments(ticket), [])
+        self.assertEqual(system.get_ticket_comments(ticket.id), [])
 
     def test_category_crud_and_ticket_assignment(self) -> None:
         data = {
@@ -552,11 +552,11 @@ class TestSystemCore(BlinkDeskTestCase):
 
         support = system.get_category_by_slug("support")
         assert support is not None
-        updated = system.set_ticket_category(ticket, support)
+        updated = system.set_ticket_category(ticket.id, support.slug)
         assert updated.category is not None
         self.assertEqual(updated.category.slug, "support")
 
-        removed = system.remove_ticket_category(updated)
+        removed = system.remove_ticket_category(updated.id)
         self.assertIsNone(removed.category)
 
     def test_set_ticket_category_logs_old_to_new(self) -> None:
@@ -571,10 +571,10 @@ class TestSystemCore(BlinkDeskTestCase):
         assert frontend is not None
         assert backend is not None
 
-        ticket = system.set_ticket_category(ticket, frontend)
-        ticket = system.set_ticket_category(ticket, backend)
+        ticket = system.set_ticket_category(ticket.id, frontend.slug)
+        ticket = system.set_ticket_category(ticket.id, backend.slug)
 
-        logs = system.get_ticket_logs(ticket)
+        logs = system.get_ticket_logs(ticket.id)
         self.assertTrue(
             any(log.details == "category: (none) => frontend" for log in logs)
         )
@@ -592,10 +592,10 @@ class TestSystemCore(BlinkDeskTestCase):
         assert category is not None
         ticket_a = system.create_ticket("A")
         ticket_b = system.create_ticket("B")
-        system.set_ticket_category(ticket_a, category)
-        system.set_ticket_category(ticket_b, category)
+        system.set_ticket_category(ticket_a.id, category.slug)
+        system.set_ticket_category(ticket_b.id, category.slug)
 
-        deleted = system.delete_category(category, force=True)
+        deleted = system.delete_category(category.slug, force=True)
         self.assertTrue(deleted)
 
         refreshed_a = system.get_ticket(ticket_a.id)
@@ -605,8 +605,8 @@ class TestSystemCore(BlinkDeskTestCase):
         self.assertIsNone(refreshed_a.category)
         self.assertIsNone(refreshed_b.category)
 
-        logs_a = system.get_ticket_logs(refreshed_a)
-        logs_b = system.get_ticket_logs(refreshed_b)
+        logs_a = system.get_ticket_logs(refreshed_a.id)
+        logs_b = system.get_ticket_logs(refreshed_b.id)
         self.assertTrue(
             any(
                 log.details

@@ -148,19 +148,17 @@ ticket = system.create_ticket("Fix the login bug", operator="alice")
 ticket = system.get_ticket(42)
 all_tickets = system.list_tickets()
 
-# Update title/description
-updated = system.update_ticket(ticket, title="Fixed the login bug", operator="alice")
+# Update title
+updated = system.update_ticket(ticket.id, title="Fixed the login bug", operator="alice")
 
 # Change state
-state = system.get_state_by_slug("closed")
-transitioned = system.transition_ticket(ticket, state, operator="alice")
+transitioned = system.transition_ticket(ticket.id, "closed", operator="alice")
 
 # Assign
-entity = system.get_entity_by_slug("alice")
-assigned = system.assign_ticket(ticket, entity, operator="alice")
+assigned = system.assign_ticket(ticket.id, "alice", operator="alice")
 
 # Add a comment
-commented = system.add_comment(ticket, "This is now fixed", operator="alice")
+commented = system.add_comment(ticket.id, "This is now fixed", operator="alice")
 ```
 
 Entities and States
@@ -170,7 +168,7 @@ Entities are users or teams. States are your workflow stages:
 
 ```python
 # Create an entity
-entity = system.create_entity("alice", "Alice Developer")
+entity = system.create_entity("alice")
 
 # Get states from the state machine
 sm = system.get_state_machine()

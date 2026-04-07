@@ -38,16 +38,13 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         Sort by id or priority, ascending or descending."""
         system = TicketingSystem(database_path)
         try:
-            tickets = system.list_tickets()
+            tickets = system.list_tickets(
+                state_slug=state,
+                assignee_slug=assignee,
+            )
 
             result: list[dict[str, Any]] = []
             for ticket in tickets:
-                if state and ticket.state.slug != state:
-                    continue
-                if assignee and (
-                    ticket.assignee is None or ticket.assignee.slug != assignee
-                ):
-                    continue
                 result.append(
                     {
                         "id": ticket.id,
@@ -113,14 +110,10 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         ticket with ID."""
         system = TicketingSystem(database_path)
         try:
-            priority_obj = system.get_priority_machine().get_priority_by_slug(priority)
-            if priority_obj is None:
-                raise ValueError(f"Unknown priority: {priority}")
-
             ticket = system.create_ticket(
                 title,
                 description,
-                priority_obj,
+                priority_slug=priority,
                 operator=operator,
             )
             return {
@@ -145,12 +138,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         Returns the updated ticket. Throws if ticket not found."""
         system = TicketingSystem(database_path)
         try:
-            ticket = system.get_ticket(ticket_id)
-            if ticket is None:
-                formatted_ticket_id = system.format_ticket_id(ticket_id)
-                raise ValueError(f"Ticket {formatted_ticket_id} not found")
-
-            ticket = system.update_ticket(ticket, title, operator=operator)
+            ticket = system.update_ticket(ticket_id, title, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -174,17 +162,11 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         found."""
         system = TicketingSystem(database_path)
         try:
-            ticket = system.get_ticket(ticket_id)
-            if ticket is None:
-                formatted_ticket_id = system.format_ticket_id(ticket_id)
-                raise ValueError(f"Ticket {formatted_ticket_id} not found")
-
-            state_machine = system.get_state_machine()
-            target_state = state_machine.get_state_by_slug(new_state)
-            if target_state is None:
-                raise ValueError(f"Unknown state: {new_state}")
-
-            ticket = system.transition_ticket(ticket, target_state, operator=operator)
+            ticket = system.transition_ticket(
+                ticket_id,
+                new_state,
+                operator=operator,
+            )
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -205,16 +187,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         Returns the updated ticket. Throws if ticket or entity not found."""
         system = TicketingSystem(database_path)
         try:
-            ticket = system.get_ticket(ticket_id)
-            if ticket is None:
-                formatted_ticket_id = system.format_ticket_id(ticket_id)
-                raise ValueError(f"Ticket {formatted_ticket_id} not found")
-
-            entity = system.get_entity_by_slug(assignee_slug)
-            if entity is None:
-                raise ValueError(f"Unknown entity: {assignee_slug}")
-
-            ticket = system.assign_ticket(ticket, entity, operator=operator)
+            ticket = system.assign_ticket(ticket_id, assignee_slug, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -231,12 +204,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         Throws if ticket not found."""
         system = TicketingSystem(database_path)
         try:
-            ticket = system.get_ticket(ticket_id)
-            if ticket is None:
-                formatted_ticket_id = system.format_ticket_id(ticket_id)
-                raise ValueError(f"Ticket {formatted_ticket_id} not found")
-
-            ticket = system.unassign_ticket(ticket, operator=operator)
+            ticket = system.unassign_ticket(ticket_id, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -290,12 +258,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         found."""
         system = TicketingSystem(database_path)
         try:
-            ticket = system.get_ticket(ticket_id)
-            if ticket is None:
-                formatted_ticket_id = system.format_ticket_id(ticket_id)
-                raise ValueError(f"Ticket {formatted_ticket_id} not found")
-
-            ticket = system.add_comment(ticket, comment, operator=operator)
+            ticket = system.add_comment(ticket_id, comment, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -312,12 +275,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         not found."""
         system = TicketingSystem(database_path)
         try:
-            ticket = system.get_ticket(ticket_id)
-            if ticket is None:
-                formatted_ticket_id = system.format_ticket_id(ticket_id)
-                raise ValueError(f"Ticket {formatted_ticket_id} not found")
-
-            comments = system.get_ticket_comments(ticket)
+            comments = system.get_ticket_comments(ticket_id)
             return [
                 {
                     "id": c.comment_id,
@@ -337,12 +295,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         Throws if ticket not found."""
         system = TicketingSystem(database_path)
         try:
-            ticket = system.get_ticket(ticket_id)
-            if ticket is None:
-                formatted_ticket_id = system.format_ticket_id(ticket_id)
-                raise ValueError(f"Ticket {formatted_ticket_id} not found")
-
-            logs = system.get_ticket_logs(ticket)
+            logs = system.get_ticket_logs(ticket_id)
             return [
                 {
                     "action": log.action,
@@ -391,21 +344,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         Throws if ticket or priority not found."""
         system = TicketingSystem(database_path)
         try:
-            ticket = system.get_ticket(ticket_id)
-            if ticket is None:
-                formatted_ticket_id = system.format_ticket_id(ticket_id)
-                raise ValueError(f"Ticket {formatted_ticket_id} not found")
-
-            priority_manager = system.get_priority_machine()
-            target_priority = priority_manager.get_priority_by_slug(priority)
-            if target_priority is None:
-                raise ValueError(f"Unknown priority: {priority}")
-
-            ticket = system.set_ticket_priority(
-                ticket,
-                target_priority,
-                operator=operator,
-            )
+            ticket = system.set_ticket_priority(ticket_id, priority, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -446,10 +385,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         the category."""
         system = TicketingSystem(database_path)
         try:
-            category = system.get_category_by_slug(slug)
-            if category is None:
-                raise ValueError(f"Unknown category: {slug}")
-            deleted = system.delete_category(category)
+            deleted = system.delete_category(slug)
             if not deleted:
                 raise ValueError(
                     f"Cannot delete category '{slug}': tickets still use it"
@@ -469,16 +405,11 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         Returns the updated ticket. Throws if ticket or category not found."""
         system = TicketingSystem(database_path)
         try:
-            ticket = system.get_ticket(ticket_id)
-            if ticket is None:
-                formatted_ticket_id = system.format_ticket_id(ticket_id)
-                raise ValueError(f"Ticket {formatted_ticket_id} not found")
-
-            category = system.get_category_by_slug(category_slug)
-            if category is None:
-                raise ValueError(f"Unknown category: {category_slug}")
-
-            ticket = system.set_ticket_category(ticket, category, operator=operator)
+            ticket = system.set_ticket_category(
+                ticket_id,
+                category_slug,
+                operator=operator,
+            )
             return {
                 "id": ticket.id,
                 "title": ticket.title,

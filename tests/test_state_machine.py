@@ -80,12 +80,12 @@ class TestStateMachine(BlinkDeskTestCase):
 
         ticket = system.create_ticket("Test")
         ticket = system.add_comment(
-            ticket,
+            ticket.id,
             "Close it",
-            new_state=closed,
+            new_state_slug=closed.slug,
             operator=entity.slug,
         )
-        system.transition_ticket(ticket, reopened)
+        system.transition_ticket(ticket.id, reopened.slug)
 
         result = system.get_state_machine().delete_state(closed)
         self.assertFalse(result)

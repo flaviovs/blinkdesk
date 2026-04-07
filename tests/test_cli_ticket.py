@@ -31,7 +31,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.assign_ticket(ticket, entity)
+        system.assign_ticket(ticket.id, entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -57,7 +57,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.assign_ticket(ticket, entity)
+        system.assign_ticket(ticket.id, entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -84,7 +84,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.assign_ticket(ticket, entity)
+        system.assign_ticket(ticket.id, entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -110,7 +110,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.assign_ticket(ticket, entity)
+        system.assign_ticket(ticket.id, entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -183,7 +183,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, "Test comment", operator=entity.slug)
+        system.add_comment(ticket.id, "Test comment", operator=entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -210,7 +210,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, "Test comment", operator=entity.slug)
+        system.add_comment(ticket.id, "Test comment", operator=entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -240,7 +240,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, "Test comment", operator=entity.slug)
+        system.add_comment(ticket.id, "Test comment", operator=entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -267,7 +267,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, "Test comment", operator=entity.slug)
+        system.add_comment(ticket.id, "Test comment", operator=entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -294,7 +294,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, "Test comment", operator=entity.slug)
+        system.add_comment(ticket.id, "Test comment", operator=entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -365,7 +365,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.assign_ticket(ticket, entity)
+        system.assign_ticket(ticket.id, entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -425,7 +425,7 @@ class TestCliTicket(BlinkDeskTestCase):
         with self.assertRaises(SystemExit):
             with redirect_stderr(err):
                 cmd_ticket_transition(args)
-        self.assertIn("State not found: missing", err.getvalue())
+        self.assertIn("Unknown state: missing", err.getvalue())
 
     def test_ticket_transition_fails_when_invalid_transition(self) -> None:
         data = {
@@ -441,9 +441,11 @@ class TestCliTicket(BlinkDeskTestCase):
             state="closed",
             operator=None,
         )
-        with self.assertRaises(ValueError) as ctx:
-            cmd_ticket_transition(args)
-        self.assertIn("Invalid transition", str(ctx.exception))
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with redirect_stderr(err):
+                cmd_ticket_transition(args)
+        self.assertIn("Invalid transition", err.getvalue())
 
     def test_ticket_set_priority(self) -> None:
         data = {
@@ -485,7 +487,7 @@ class TestCliTicket(BlinkDeskTestCase):
         with self.assertRaises(SystemExit):
             with redirect_stderr(err):
                 cmd_ticket_set_priority(args)
-        self.assertIn("Priority not found: missing", err.getvalue())
+        self.assertIn("Unknown priority: missing", err.getvalue())
 
     def test_ticket_set_category_and_remove_category(self) -> None:
         data = {
@@ -588,7 +590,7 @@ class TestCliTicket(BlinkDeskTestCase):
         with self.assertRaises(SystemExit):
             with redirect_stderr(err):
                 cmd_ticket_comment(args)
-        self.assertIn("State not found: missing", err.getvalue())
+        self.assertIn("Unknown state: missing", err.getvalue())
 
     def test_cli_main_supports_short_flags_for_ticket_subcommands(self) -> None:
         data = {

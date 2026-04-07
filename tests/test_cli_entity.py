@@ -44,7 +44,7 @@ class TestCliEntity(BlinkDeskTestCase):
 
         delete_args = argparse.Namespace(
             database_path=self.db_path,
-            entity_id=entity.entity_id,
+            slug=entity.slug,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -65,11 +65,11 @@ class TestCliEntity(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.assign_ticket(ticket, entity)
+        system.assign_ticket(ticket.id, entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
-            entity_id=entity.entity_id,
+            slug=entity.slug,
         )
         out = io.StringIO()
         err = io.StringIO()

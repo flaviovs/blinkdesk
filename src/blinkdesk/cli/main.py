@@ -289,7 +289,7 @@ def main() -> None:
     entity_add.set_defaults(func=cmd_entity_add)
 
     entity_delete = p_entity_sub.add_parser("delete", help="Delete an entity")
-    entity_delete.add_argument("entity_id", type=int, help="Entity ID")
+    entity_delete.add_argument("slug", help="Entity slug")
     entity_delete.set_defaults(func=cmd_entity_delete)
 
     # state

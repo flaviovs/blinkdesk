@@ -231,15 +231,21 @@ class TicketingSystem:
         logger.info("Renamed category: %s -> %s", old_slug, new_slug)
         return Category(category_id=category.category_id, slug=new_slug)
 
-    def delete_entity(self, entity: Entity) -> bool:
+    def delete_entity(self, slug: str) -> bool:
         """Delete an entity if it's not assigned to any tickets.
 
         Args:
-            entity: Entity to delete.
+            slug: Entity slug to delete.
 
         Returns:
             True if deleted, False if entity is assigned to tickets.
+
+        Raises:
+            ValueError: If the entity does not exist.
         """
+        entity = self.get_entity_by_slug(slug)
+        if entity is None:
+            raise ValueError(f"Entity not found: {slug}")
         try:
             with self._conn:
                 self._conn.execute(
@@ -254,16 +260,22 @@ class TicketingSystem:
         logger.info("Deleted entity: %s", entity.slug)
         return True
 
-    def delete_category(self, category: Category, force: bool = False) -> bool:
+    def delete_category(self, slug: str, force: bool = False) -> bool:
         """Delete a category, optionally clearing it from linked tickets.
 
         Args:
-            category: Category to delete.
+            slug: Category slug to delete.
             force: When True, remove category from linked tickets first.
 
         Returns:
             True if deleted, False if linked tickets exist and force=False.
+
+        Raises:
+            ValueError: If the category does not exist.
         """
+        category = self.get_category_by_slug(slug)
+        if category is None:
+            raise ValueError(f"Category not found: {slug}")
         try:
             with self._conn:
                 if force:
@@ -372,12 +384,47 @@ class TicketingSystem:
         """Return a human-friendly slug for an operator in logger messages."""
         return operator.slug if operator is not None else "*anonymous*"
 
+    def _require_ticket(self, ticket_id: int) -> Ticket:
+        """Resolve a ticket by ID or raise ValueError when missing."""
+        ticket = self.get_ticket(ticket_id)
+        if ticket is None:
+            raise ValueError(f"Ticket {self.format_ticket_id(ticket_id)} not found")
+        return ticket
+
+    def _require_state_slug(self, state_slug: str) -> TicketState:
+        """Resolve a state by slug or raise ValueError when missing."""
+        state = self._state_machine.get_state_by_slug(state_slug)
+        if state is None:
+            raise ValueError(f"Unknown state: {state_slug}")
+        return state
+
+    def _require_priority_slug(self, priority_slug: str) -> TicketPriority:
+        """Resolve a priority by slug or raise ValueError when missing."""
+        priority = self._priority_manager.get_priority_by_slug(priority_slug)
+        if priority is None:
+            raise ValueError(f"Unknown priority: {priority_slug}")
+        return priority
+
+    def _require_entity_slug(self, entity_slug: str, *, context: str) -> Entity:
+        """Resolve an entity by slug or raise ValueError when missing."""
+        entity = self.get_entity_by_slug(entity_slug)
+        if entity is None:
+            raise ValueError(f"{context} not found: {entity_slug}")
+        return entity
+
+    def _require_category_slug(self, category_slug: str) -> Category:
+        """Resolve a category by slug or raise ValueError when missing."""
+        category = self.get_category_by_slug(category_slug)
+        if category is None:
+            raise ValueError(f"Category not found: {category_slug}")
+        return category
+
     def create_ticket(
         self,
         title: str,
         description: str | None = None,
-        priority: TicketPriority | None = None,
-        category: Category | None = None,
+        priority_slug: str | None = None,
+        category_slug: str | None = None,
         operator: str | None = None,
     ) -> Ticket:
         """Create a new ticket.
@@ -385,8 +432,8 @@ class TicketingSystem:
         Args:
             title: Title of the ticket.
             description: Optional description of the ticket.
-            priority: Optional priority (defaults to "normal").
-            category: Optional category.
+            priority_slug: Optional priority slug (defaults to "normal").
+            category_slug: Optional category slug.
             operator: Optional operator slug performing this mutation.
 
         Returns:
@@ -400,10 +447,18 @@ class TicketingSystem:
         if not states:
             raise ValueError("No states defined in the system")
 
+        selected_priority_slug = (
+            priority_slug if priority_slug is not None else "normal"
+        )
+        priority = self._priority_manager.get_priority_by_slug(selected_priority_slug)
         if priority is None:
-            priority = self._priority_manager.get_priority_by_slug("normal")
-            if priority is None:
+            if priority_slug is None:
                 raise ValueError("Default priority 'normal' not found")
+            raise ValueError(f"Unknown priority: {selected_priority_slug}")
+
+        category: Category | None = None
+        if category_slug is not None:
+            category = self._require_category_slug(category_slug)
 
         initial_state = states[0]
         now = datetime.now(timezone.utc).isoformat()
@@ -468,14 +523,16 @@ class TicketingSystem:
 
     def list_tickets(
         self,
-        state: TicketState | None = None,
-        assignee: Entity | None = None,
+        state_slug: str | None = None,
+        assignee_slug: str | None = None,
+        priority_slug: str | None = None,
     ) -> list[Ticket]:
         """List all tickets.
 
         Args:
-            state: Optional state to filter by.
-            assignee: Optional assignee to filter by.
+            state_slug: Optional state slug to filter by.
+            assignee_slug: Optional assignee slug to filter by.
+            priority_slug: Optional priority slug to filter by.
 
         Returns:
             List of all tickets ordered by ticket_id.
@@ -484,12 +541,17 @@ class TicketingSystem:
         conditions: list[str] = []
         params: list[int | str] = []
 
-        if state:
+        if state_slug:
             conditions.append("ts.state_id = ?")
-            params.append(state.state_id)
-        if assignee:
+            params.append(self._require_state_slug(state_slug).state_id)
+        if assignee_slug:
             conditions.append("t.assignee_entity_id = ?")
-            params.append(assignee.entity_id)
+            params.append(
+                self._require_entity_slug(assignee_slug, context="Assignee").entity_id
+            )
+        if priority_slug:
+            conditions.append("tp.priority_id = ?")
+            params.append(self._require_priority_slug(priority_slug).priority_id)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -500,20 +562,21 @@ class TicketingSystem:
 
     def update_ticket(
         self,
-        ticket: Ticket,
+        ticket_id: int,
         title: str,
         operator: str | None = None,
     ) -> Ticket:
         """Update a ticket's title.
 
         Args:
-            ticket: Ticket to update.
+            ticket_id: Ticket ID to update.
             title: New title.
             operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        ticket = self._require_ticket(ticket_id)
         operator_entity = self._resolve_operator(operator, operation="update_ticket")
         if title == ticket.title:
             logger.warning(
@@ -546,20 +609,22 @@ class TicketingSystem:
 
     def set_ticket_priority(
         self,
-        ticket: Ticket,
-        priority: TicketPriority,
+        ticket_id: int,
+        priority_slug: str,
         operator: str | None = None,
     ) -> Ticket:
         """Set a ticket's priority.
 
         Args:
-            ticket: Ticket to update.
-            priority: New priority.
+            ticket_id: Ticket ID to update.
+            priority_slug: New priority slug.
             operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        ticket = self._require_ticket(ticket_id)
+        priority = self._require_priority_slug(priority_slug)
         operator_entity = self._resolve_operator(
             operator,
             operation="set_ticket_priority",
@@ -589,20 +654,22 @@ class TicketingSystem:
 
     def set_ticket_category(
         self,
-        ticket: Ticket,
-        category: Category,
+        ticket_id: int,
+        category_slug: str,
         operator: str | None = None,
     ) -> Ticket:
         """Set a ticket's category.
 
         Args:
-            ticket: Ticket to update.
-            category: New category.
+            ticket_id: Ticket ID to update.
+            category_slug: New category slug.
             operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        ticket = self._require_ticket(ticket_id)
+        category = self._require_category_slug(category_slug)
         operator_entity = self._resolve_operator(
             operator,
             operation="set_ticket_category",
@@ -633,18 +700,19 @@ class TicketingSystem:
 
     def remove_ticket_category(
         self,
-        ticket: Ticket,
+        ticket_id: int,
         operator: str | None = None,
     ) -> Ticket:
         """Remove a ticket's category.
 
         Args:
-            ticket: Ticket to update.
+            ticket_id: Ticket ID to update.
             operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        ticket = self._require_ticket(ticket_id)
         operator_entity = self._resolve_operator(
             operator,
             operation="remove_ticket_category",
@@ -674,20 +742,22 @@ class TicketingSystem:
 
     def assign_ticket(
         self,
-        ticket: Ticket,
-        entity: Entity,
+        ticket_id: int,
+        assignee_slug: str,
         operator: str | None = None,
     ) -> Ticket:
         """Assign a ticket to an entity.
 
         Args:
-            ticket: Ticket to assign.
-            entity: Entity to assign the ticket to.
+            ticket_id: Ticket ID to assign.
+            assignee_slug: Entity slug to assign the ticket to.
             operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        ticket = self._require_ticket(ticket_id)
+        entity = self._require_entity_slug(assignee_slug, context="Assignee")
         operator_entity = self._resolve_operator(operator, operation="assign_ticket")
         now = datetime.now(timezone.utc).isoformat()
         with self._conn:
@@ -714,18 +784,19 @@ class TicketingSystem:
 
     def unassign_ticket(
         self,
-        ticket: Ticket,
+        ticket_id: int,
         operator: str | None = None,
     ) -> Ticket:
         """Unassign a ticket.
 
         Args:
-            ticket: Ticket to unassign.
+            ticket_id: Ticket ID to unassign.
             operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        ticket = self._require_ticket(ticket_id)
         operator_entity = self._resolve_operator(operator, operation="unassign_ticket")
         now = datetime.now(timezone.utc).isoformat()
         with self._conn:
@@ -783,15 +854,15 @@ class TicketingSystem:
 
     def transition_ticket(
         self,
-        ticket: Ticket,
-        new_state: TicketState,
+        ticket_id: int,
+        new_state_slug: str,
         operator: str | None = None,
     ) -> Ticket:
         """Transition a ticket to a new state.
 
         Args:
-            ticket: Ticket to transition.
-            new_state: Target state.
+            ticket_id: Ticket ID to transition.
+            new_state_slug: Target state slug.
             operator: Optional operator slug performing this mutation.
 
         Returns:
@@ -800,6 +871,8 @@ class TicketingSystem:
         Raises:
             ValueError: If the transition is not allowed.
         """
+        ticket = self._require_ticket(ticket_id)
+        new_state = self._require_state_slug(new_state_slug)
         operator_entity = self._resolve_operator(
             operator,
             operation="transition_ticket",
@@ -817,15 +890,16 @@ class TicketingSystem:
         )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
-    def get_ticket_logs(self, ticket: Ticket) -> list[TicketLog]:
+    def get_ticket_logs(self, ticket_id: int) -> list[TicketLog]:
         """Get all logs for a ticket.
 
         Args:
-            ticket: Ticket to get logs for.
+            ticket_id: Ticket ID to get logs for.
 
         Returns:
             List of ticket logs ordered by log ID.
         """
+        ticket = self._require_ticket(ticket_id)
         cursor = self._conn.execute(
             """
             SELECT
@@ -853,22 +927,26 @@ class TicketingSystem:
 
     def add_comment(
         self,
-        ticket: Ticket,
+        ticket_id: int,
         comment: str,
-        new_state: TicketState | None = None,
+        new_state_slug: str | None = None,
         operator: str | None = None,
     ) -> Ticket:
         """Add a comment to a ticket.
 
         Args:
-            ticket: Ticket to comment on.
+            ticket_id: Ticket ID to comment on.
             comment: Comment text.
-            new_state: Optional new state to transition to.
+            new_state_slug: Optional new state slug to transition to.
             operator: Operator slug of who is adding the comment.
 
         Returns:
             The updated Ticket.
         """
+        ticket = self._require_ticket(ticket_id)
+        new_state: TicketState | None = None
+        if new_state_slug is not None:
+            new_state = self._require_state_slug(new_state_slug)
         operator_entity = self._resolve_operator(operator, operation="add_comment")
         with self._conn:
             if new_state is not None:
@@ -908,15 +986,16 @@ class TicketingSystem:
         )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
-    def get_ticket_comments(self, ticket: Ticket) -> list[Comment]:
+    def get_ticket_comments(self, ticket_id: int) -> list[Comment]:
         """Get all comments for a ticket.
 
         Args:
-            ticket: Ticket to get comments for.
+            ticket_id: Ticket ID to get comments for.
 
         Returns:
             List of comments ordered by comment ID.
         """
+        ticket = self._require_ticket(ticket_id)
         cursor = self._conn.execute(
             """
             SELECT

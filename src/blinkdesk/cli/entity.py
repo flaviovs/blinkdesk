@@ -23,17 +23,16 @@ def cmd_entity_delete(args: argparse.Namespace) -> None:
     db_path = _get_database_path(args)
     system = TicketingSystem(db_path)
     try:
-        entity = system.get_entity(args.entity_id)
-        if entity is None:
-            print(f"Entity not found: {args.entity_id}", file=sys.stderr)
-            sys.exit(1)
-        if not system.delete_entity(entity):
+        if not system.delete_entity(args.slug):
             print(
-                f"Cannot delete entity '{entity.slug}' - it is linked to ticket(s)",
+                f"Cannot delete entity '{args.slug}' - it is linked to ticket(s)",
                 file=sys.stderr,
             )
             sys.exit(1)
-        print(f"Entity deleted: {entity.slug} (id={entity.entity_id})")
+        print(f"Entity deleted: {args.slug}")
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
     finally:
         system.close()
 

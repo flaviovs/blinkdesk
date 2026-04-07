@@ -52,12 +52,7 @@ def cmd_category_delete(args: argparse.Namespace) -> None:
     db_path = _get_database_path(args)
     system = TicketingSystem(db_path)
     try:
-        category = system.get_category_by_slug(args.slug)
-        if category is None:
-            print(f"Category not found: {args.slug}", file=sys.stderr)
-            sys.exit(1)
-
-        deleted = system.delete_category(category, force=args.force)
+        deleted = system.delete_category(args.slug, force=args.force)
         if not deleted:
             print(
                 f"Cannot delete category '{args.slug}': "
@@ -66,5 +61,8 @@ def cmd_category_delete(args: argparse.Namespace) -> None:
             )
             sys.exit(1)
         print(f"Category deleted: {args.slug}")
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
     finally:
         system.close()
