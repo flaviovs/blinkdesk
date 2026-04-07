@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import sys
 
 from .config import (
     cmd_config_get,
@@ -46,6 +47,38 @@ from .ticket import (
 )
 
 
+def _parse_ticket_description(value: str) -> str:
+    """Parse ticket description from inline text, file, or stdin.
+
+    Args:
+        value: Description argument value.
+
+    Returns:
+        The resolved description text.
+
+    Raises:
+        argparse.ArgumentTypeError: If the referenced file cannot be read.
+    """
+    if value == "-":
+        return sys.stdin.read()
+
+    if value.startswith("@"):
+        file_path = value[1:]
+        if not file_path:
+            raise argparse.ArgumentTypeError(
+                "description file path cannot be empty after '@'"
+            )
+        try:
+            with open(file_path, "r", encoding="utf-8") as file_obj:
+                return file_obj.read()
+        except OSError as exc:
+            raise argparse.ArgumentTypeError(
+                f"cannot read description file '{file_path}': {exc}"
+            ) from exc
+
+    return value
+
+
 def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(prog="bd", description="BlinkDesk CLI")
@@ -69,7 +102,12 @@ def main() -> None:
 
     create = p_create_sub.add_parser("create", help="Create a ticket")
     create.add_argument("-t", "--title", required=True, help="Ticket title")
-    create.add_argument("-m", "--description", help="Ticket description")
+    create.add_argument(
+        "-m",
+        "--description",
+        type=_parse_ticket_description,
+        help="Ticket description text, @file, or - for stdin",
+    )
     create.add_argument(
         "-p", "--priority", default="normal", help="Priority slug (default: normal)"
     )

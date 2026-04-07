@@ -1,6 +1,7 @@
 import argparse
 import io
 import json
+import os
 from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
@@ -606,6 +607,70 @@ class TestCliTicket(BlinkDeskTestCase):
         self.assertIn("Ticket assigned:", output)
         self.assertIn("Ticket priority set:", output)
         self.assertIn("Comment added to ticket", output)
+
+    def test_cli_main_supports_stdin_description_for_ticket_create(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        out = io.StringIO()
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "create",
+                "-t",
+                "From stdin",
+                "-m",
+                "-",
+            ],
+        ):
+            with patch("sys.stdin", io.StringIO("Body from stdin\nSecond line")):
+                with redirect_stdout(out):
+                    cli_main()
+
+        created = system.get_ticket(1)
+        assert created is not None
+        self.assertEqual(created.description, "Body from stdin\nSecond line")
+        self.assertIn("Ticket created:", out.getvalue())
+
+    def test_cli_main_supports_file_description_for_ticket_create(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        description_path = os.path.join(self.temp_dir, "description.txt")
+        with open(description_path, "w", encoding="utf-8") as f:
+            f.write("Body from file\nSecond line")
+
+        out = io.StringIO()
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "create",
+                "-t",
+                "From file",
+                "-m",
+                f"@{description_path}",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        os.remove(description_path)
+
+        created = system.get_ticket(1)
+        assert created is not None
+        self.assertEqual(created.description, "Body from file\nSecond line")
+        self.assertIn("Ticket created:", out.getvalue())
 
     def test_cli_main_supports_short_flag_for_ticket_update_title(self) -> None:
         data = {

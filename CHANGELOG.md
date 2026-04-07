@@ -10,7 +10,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
-- No unreleased changes
+- `bd ticket create -m/--description` now accepts `@<path>` to read the description from a file and `-` to read it from stdin
 
 ## [0.7.0] - 2026-04-04
 
