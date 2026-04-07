@@ -102,7 +102,10 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
 
     @mcp.tool()
     def create_ticket(
-        title: str, description: str | None = None, priority: str = "normal"
+        title: str,
+        description: str | None = None,
+        priority: str = "normal",
+        operator: str | None = None,
     ) -> dict[str, Any]:
         """Use when creating a new issue ticket in the ticket tracking system.
         Title is required, description optional. Priority defaults to 'normal'.
@@ -114,7 +117,12 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             if priority_obj is None:
                 raise ValueError(f"Unknown priority: {priority}")
 
-            ticket = system.create_ticket(title, description, priority_obj)
+            ticket = system.create_ticket(
+                title,
+                description,
+                priority_obj,
+                operator=operator,
+            )
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -130,6 +138,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
     def update_ticket(
         ticket_id: int,
         title: str,
+        operator: str | None = None,
     ) -> dict[str, Any]:
         """Use when modifying the title of an existing issue ticket
         in the ticket tracking system. Provide ticket_id and the new title.
@@ -141,7 +150,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 formatted_ticket_id = system.format_ticket_id(ticket_id)
                 raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
-            ticket = system.update_ticket(ticket, title)
+            ticket = system.update_ticket(ticket, title, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -154,7 +163,11 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             system.close()
 
     @mcp.tool()
-    def transition_ticket_state(ticket_id: int, new_state: str) -> dict[str, Any]:
+    def transition_ticket_state(
+        ticket_id: int,
+        new_state: str,
+        operator: str | None = None,
+    ) -> dict[str, Any]:
         """Use when changing the state of an issue ticket in the ticket tracking
         system. Provide ticket_id and the target state slug (e.g., 'open', 'closed',
         'in_progress'). Returns the updated ticket. Throws if ticket or state not
@@ -171,7 +184,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             if target_state is None:
                 raise ValueError(f"Unknown state: {new_state}")
 
-            ticket = system.transition_ticket(ticket, target_state)
+            ticket = system.transition_ticket(ticket, target_state, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -182,7 +195,11 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             system.close()
 
     @mcp.tool()
-    def assign_ticket(ticket_id: int, assignee_slug: str) -> dict[str, Any]:
+    def assign_ticket(
+        ticket_id: int,
+        assignee_slug: str,
+        operator: str | None = None,
+    ) -> dict[str, Any]:
         """Use when assigning an issue ticket to a user or team in the ticket
         tracking system. Provide ticket_id and the entity slug of the assignee.
         Returns the updated ticket. Throws if ticket or entity not found."""
@@ -197,7 +214,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             if entity is None:
                 raise ValueError(f"Unknown entity: {assignee_slug}")
 
-            ticket = system.assign_ticket(ticket, entity)
+            ticket = system.assign_ticket(ticket, entity, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -208,7 +225,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             system.close()
 
     @mcp.tool()
-    def unassign_ticket(ticket_id: int) -> dict[str, Any]:
+    def unassign_ticket(ticket_id: int, operator: str | None = None) -> dict[str, Any]:
         """Use when unassigning an issue ticket (removing the assignee) in the
         ticket tracking system. Provide ticket_id. Returns the updated ticket.
         Throws if ticket not found."""
@@ -219,7 +236,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 formatted_ticket_id = system.format_ticket_id(ticket_id)
                 raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
-            ticket = system.unassign_ticket(ticket)
+            ticket = system.unassign_ticket(ticket, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -263,11 +280,13 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
 
     @mcp.tool()
     def add_ticket_comment(
-        ticket_id: int, author_slug: str, comment: str
+        ticket_id: int,
+        comment: str,
+        operator: str | None = None,
     ) -> dict[str, Any]:
         """Use when adding a comment/note to an existing issue ticket in the
-        ticket tracking system. Requires ticket_id, author entity slug, and
-        comment text. Returns the updated ticket. Throws if ticket or author not
+        ticket tracking system. Requires ticket_id and
+        comment text. Returns the updated ticket. Throws if ticket or operator not
         found."""
         system = TicketingSystem(database_path)
         try:
@@ -276,11 +295,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
                 formatted_ticket_id = system.format_ticket_id(ticket_id)
                 raise ValueError(f"Ticket {formatted_ticket_id} not found")
 
-            entity = system.get_entity_by_slug(author_slug)
-            if entity is None:
-                raise ValueError(f"Unknown entity: {author_slug}")
-
-            ticket = system.add_comment(ticket, entity, comment)
+            ticket = system.add_comment(ticket, comment, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -365,7 +380,11 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             system.close()
 
     @mcp.tool()
-    def set_ticket_priority(ticket_id: int, priority: str) -> dict[str, Any]:
+    def set_ticket_priority(
+        ticket_id: int,
+        priority: str,
+        operator: str | None = None,
+    ) -> dict[str, Any]:
         """Use when setting/changing the priority of an issue ticket in the ticket
         tracking system. Provide ticket_id and the target priority slug
         (e.g., 'low', 'normal', 'high'). Returns the updated ticket.
@@ -382,7 +401,11 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             if target_priority is None:
                 raise ValueError(f"Unknown priority: {priority}")
 
-            ticket = system.set_ticket_priority(ticket, target_priority)
+            ticket = system.set_ticket_priority(
+                ticket,
+                target_priority,
+                operator=operator,
+            )
             return {
                 "id": ticket.id,
                 "title": ticket.title,
@@ -436,7 +459,11 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             system.close()
 
     @mcp.tool()
-    def set_ticket_category(ticket_id: int, category_slug: str) -> dict[str, Any]:
+    def set_ticket_category(
+        ticket_id: int,
+        category_slug: str,
+        operator: str | None = None,
+    ) -> dict[str, Any]:
         """Use when setting/changing the category of an issue ticket in the
         ticket tracking system. Provide ticket_id and target category slug.
         Returns the updated ticket. Throws if ticket or category not found."""
@@ -451,7 +478,7 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             if category is None:
                 raise ValueError(f"Unknown category: {category_slug}")
 
-            ticket = system.set_ticket_category(ticket, category)
+            ticket = system.set_ticket_category(ticket, category, operator=operator)
             return {
                 "id": ticket.id,
                 "title": ticket.title,

@@ -262,6 +262,12 @@ def _seed_options(conn: sqlite3.Connection, options: dict[str, Any]) -> None:
             ("display_prefix", "#"),
         )
 
+    if "require_operator" not in options:
+        conn.execute(
+            "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+            ("require_operator", "false"),
+        )
+
     logger.info("Seeded config options: count=%d", len(options))
 
 

@@ -183,7 +183,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, entity, "Test comment")
+        system.add_comment(ticket, "Test comment", operator=entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -210,7 +210,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, entity, "Test comment")
+        system.add_comment(ticket, "Test comment", operator=entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -240,7 +240,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, entity, "Test comment")
+        system.add_comment(ticket, "Test comment", operator=entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -267,7 +267,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, entity, "Test comment")
+        system.add_comment(ticket, "Test comment", operator=entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -294,7 +294,7 @@ class TestCliTicket(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, entity, "Test comment")
+        system.add_comment(ticket, "Test comment", operator=entity.slug)
 
         args = argparse.Namespace(
             database_path=self.db_path,
@@ -324,6 +324,7 @@ class TestCliTicket(BlinkDeskTestCase):
             database_path=self.db_path,
             ticket_id=ticket.id,
             assignee="alice",
+            operator=None,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -346,6 +347,7 @@ class TestCliTicket(BlinkDeskTestCase):
             database_path=self.db_path,
             ticket_id=ticket.id,
             assignee="missing",
+            operator=None,
         )
         err = io.StringIO()
         with self.assertRaises(SystemExit):
@@ -365,7 +367,11 @@ class TestCliTicket(BlinkDeskTestCase):
         ticket = system.create_ticket("Test")
         system.assign_ticket(ticket, entity)
 
-        args = argparse.Namespace(database_path=self.db_path, ticket_id=ticket.id)
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            ticket_id=ticket.id,
+            operator=None,
+        )
         out = io.StringIO()
         with redirect_stdout(out):
             cmd_ticket_unassign(args)
@@ -390,6 +396,7 @@ class TestCliTicket(BlinkDeskTestCase):
             database_path=self.db_path,
             ticket_id=ticket.id,
             state="in_progress",
+            operator=None,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -412,6 +419,7 @@ class TestCliTicket(BlinkDeskTestCase):
             database_path=self.db_path,
             ticket_id=ticket.id,
             state="missing",
+            operator=None,
         )
         err = io.StringIO()
         with self.assertRaises(SystemExit):
@@ -431,6 +439,7 @@ class TestCliTicket(BlinkDeskTestCase):
             database_path=self.db_path,
             ticket_id=ticket.id,
             state="closed",
+            operator=None,
         )
         with self.assertRaises(ValueError) as ctx:
             cmd_ticket_transition(args)
@@ -448,6 +457,7 @@ class TestCliTicket(BlinkDeskTestCase):
             database_path=self.db_path,
             ticket_id=ticket.id,
             priority="high",
+            operator=None,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -469,6 +479,7 @@ class TestCliTicket(BlinkDeskTestCase):
             database_path=self.db_path,
             ticket_id=ticket.id,
             priority="missing",
+            operator=None,
         )
         err = io.StringIO()
         with self.assertRaises(SystemExit):
@@ -488,6 +499,7 @@ class TestCliTicket(BlinkDeskTestCase):
             database_path=self.db_path,
             ticket_id=ticket.id,
             category="support",
+            operator=None,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -502,6 +514,7 @@ class TestCliTicket(BlinkDeskTestCase):
         remove_args = argparse.Namespace(
             database_path=self.db_path,
             ticket_id=ticket.id,
+            operator=None,
         )
         out = io.StringIO()
         with redirect_stdout(out):
@@ -523,6 +536,7 @@ class TestCliTicket(BlinkDeskTestCase):
             database_path=self.db_path,
             ticket_id=ticket.id,
             category="missing",
+            operator=None,
         )
         err = io.StringIO()
         with self.assertRaises(SystemExit):
@@ -542,7 +556,7 @@ class TestCliTicket(BlinkDeskTestCase):
         args = argparse.Namespace(
             database_path=self.db_path,
             ticket_id=ticket.id,
-            entity="alice",
+            operator="alice",
             comment="Closing",
             state="closed",
         )
@@ -566,7 +580,7 @@ class TestCliTicket(BlinkDeskTestCase):
         args = argparse.Namespace(
             database_path=self.db_path,
             ticket_id=ticket.id,
-            entity="alice",
+            operator="alice",
             comment="Trying state",
             state="missing",
         )
@@ -647,7 +661,7 @@ class TestCliTicket(BlinkDeskTestCase):
                 "ticket",
                 "comment",
                 str(ticket.id),
-                "-e",
+                "-o",
                 "alice",
                 "-c",
                 "Done",
@@ -841,3 +855,88 @@ class TestCliTicket(BlinkDeskTestCase):
                     cli_main()
 
         self.assertIn("-d/--database-path", err.getvalue())
+
+    def test_cli_ticket_create_accepts_operator(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        self._init_system(data)
+
+        out = io.StringIO()
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "create",
+                "-t",
+                "With operator",
+                "-o",
+                "alice",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        self.assertIn("Ticket created:", out.getvalue())
+
+    def test_cli_ticket_create_fails_without_operator_when_required(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+            "options": {"require_operator": "true"},
+        }
+        self._init_system(data)
+
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with patch(
+                "sys.argv",
+                [
+                    "bd",
+                    "-d",
+                    self.db_path,
+                    "ticket",
+                    "create",
+                    "-t",
+                    "Needs operator",
+                ],
+            ):
+                with redirect_stderr(err):
+                    cli_main()
+
+        self.assertIn(
+            "Operator is required for operation: create_ticket",
+            err.getvalue(),
+        )
+
+    def test_cli_ticket_create_fails_for_unknown_operator(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        self._init_system(data)
+
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with patch(
+                "sys.argv",
+                [
+                    "bd",
+                    "-d",
+                    self.db_path,
+                    "ticket",
+                    "create",
+                    "-t",
+                    "Unknown operator",
+                    "-o",
+                    "ghost",
+                ],
+            ):
+                with redirect_stderr(err):
+                    cli_main()
+
+        self.assertIn("Operator not found: ghost", err.getvalue())

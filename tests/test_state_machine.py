@@ -79,7 +79,12 @@ class TestStateMachine(BlinkDeskTestCase):
         assert reopened is not None
 
         ticket = system.create_ticket("Test")
-        ticket = system.add_comment(ticket, entity, "Close it", new_state=closed)
+        ticket = system.add_comment(
+            ticket,
+            "Close it",
+            new_state=closed,
+            operator=entity.slug,
+        )
         system.transition_ticket(ticket, reopened)
 
         result = system.get_state_machine().delete_state(closed)

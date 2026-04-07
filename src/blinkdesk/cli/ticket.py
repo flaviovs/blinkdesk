@@ -24,7 +24,12 @@ def cmd_ticket_create(args: argparse.Namespace) -> None:
         if priority is None:
             print(f"Priority not found: {args.priority}", file=sys.stderr)
             sys.exit(1)
-        ticket = system.create_ticket(args.title, args.description, priority)
+        ticket = system.create_ticket(
+            args.title,
+            args.description,
+            priority,
+            operator=args.operator,
+        )
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Ticket created: {ticket_id}")
     finally:
@@ -41,7 +46,11 @@ def cmd_ticket_update(args: argparse.Namespace) -> None:
             ticket_id = system.format_ticket_id(args.ticket_id)
             print(f"Ticket not found: {ticket_id}", file=sys.stderr)
             sys.exit(1)
-        ticket = system.update_ticket(ticket, args.title)
+        ticket = system.update_ticket(
+            ticket,
+            args.title,
+            operator=args.operator,
+        )
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Ticket updated: {ticket_id}")
     finally:
@@ -157,11 +166,6 @@ def cmd_ticket_comment(args: argparse.Namespace) -> None:
             print(f"Ticket not found: {ticket_id}", file=sys.stderr)
             sys.exit(1)
 
-        entity = system.get_entity_by_slug(args.entity)
-        if entity is None:
-            print(f"Entity not found: {args.entity}", file=sys.stderr)
-            sys.exit(1)
-
         state_slug = getattr(args, "state", None)
         new_state = None
         if state_slug:
@@ -170,7 +174,12 @@ def cmd_ticket_comment(args: argparse.Namespace) -> None:
                 print(f"State not found: {state_slug}", file=sys.stderr)
                 sys.exit(1)
 
-        ticket = system.add_comment(ticket, entity, args.comment, new_state=new_state)
+        ticket = system.add_comment(
+            ticket,
+            args.comment,
+            new_state=new_state,
+            operator=args.operator,
+        )
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Comment added to ticket {ticket_id}")
     finally:
@@ -193,7 +202,11 @@ def cmd_ticket_assign(args: argparse.Namespace) -> None:
             print(f"Assignee not found: {args.assignee}", file=sys.stderr)
             sys.exit(1)
 
-        ticket = system.assign_ticket(ticket, assignee)
+        ticket = system.assign_ticket(
+            ticket,
+            assignee,
+            operator=args.operator,
+        )
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Ticket assigned: {ticket_id}")
     finally:
@@ -211,7 +224,7 @@ def cmd_ticket_unassign(args: argparse.Namespace) -> None:
             print(f"Ticket not found: {ticket_id}", file=sys.stderr)
             sys.exit(1)
 
-        ticket = system.unassign_ticket(ticket)
+        ticket = system.unassign_ticket(ticket, operator=args.operator)
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Ticket unassigned: {ticket_id}")
     finally:
@@ -234,7 +247,11 @@ def cmd_ticket_transition(args: argparse.Namespace) -> None:
             print(f"State not found: {args.state}", file=sys.stderr)
             sys.exit(1)
 
-        ticket = system.transition_ticket(ticket, state)
+        ticket = system.transition_ticket(
+            ticket,
+            state,
+            operator=args.operator,
+        )
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Ticket transitioned: {ticket_id}")
     finally:
@@ -257,7 +274,11 @@ def cmd_ticket_set_priority(args: argparse.Namespace) -> None:
             print(f"Priority not found: {args.priority}", file=sys.stderr)
             sys.exit(1)
 
-        ticket = system.set_ticket_priority(ticket, priority)
+        ticket = system.set_ticket_priority(
+            ticket,
+            priority,
+            operator=args.operator,
+        )
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Ticket priority set: {ticket_id}")
     finally:
@@ -280,7 +301,11 @@ def cmd_ticket_set_category(args: argparse.Namespace) -> None:
             print(f"Category not found: {args.category}", file=sys.stderr)
             sys.exit(1)
 
-        ticket = system.set_ticket_category(ticket, category)
+        ticket = system.set_ticket_category(
+            ticket,
+            category,
+            operator=args.operator,
+        )
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Ticket category set: {ticket_id}")
     finally:
@@ -298,7 +323,10 @@ def cmd_ticket_remove_category(args: argparse.Namespace) -> None:
             print(f"Ticket not found: {ticket_id}", file=sys.stderr)
             sys.exit(1)
 
-        ticket = system.remove_ticket_category(ticket)
+        ticket = system.remove_ticket_category(
+            ticket,
+            operator=args.operator,
+        )
         ticket_id = system.format_ticket_id(ticket.id)
         print(f"Ticket category removed: {ticket_id}")
     finally:

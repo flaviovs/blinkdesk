@@ -119,12 +119,14 @@ def main() -> None:
     create.add_argument(
         "-p", "--priority", default="normal", help="Priority slug (default: normal)"
     )
+    create.add_argument("-o", "--operator", help="Operator entity slug")
     create.set_defaults(func=cmd_ticket_create)
 
     # ticket update
     update = p_create_sub.add_parser("update", help="Update a ticket")
     update.add_argument("ticket_id", type=int, help="Ticket ID")
     update.add_argument("-t", "--title", required=True, help="New ticket title")
+    update.add_argument("-o", "--operator", help="Operator entity slug")
     update.set_defaults(func=cmd_ticket_update)
 
     # ticket list
@@ -154,44 +156,47 @@ def main() -> None:
     # ticket comment
     comment = p_create_sub.add_parser("comment", help="Add a comment")
     comment.add_argument("ticket_id", type=int, help="Ticket ID")
-    comment.add_argument(
-        "-e", "--entity", required=True, help="Entity (user) adding the comment"
-    )
     comment.add_argument("-c", "--comment", required=True, help="Comment text")
     comment.add_argument(
         "-s",
         "--state",
         help="Optional state slug to transition ticket while commenting",
     )
+    comment.add_argument("-o", "--operator", help="Operator entity slug")
     comment.set_defaults(func=cmd_ticket_comment)
 
     # ticket assign
     assign = p_create_sub.add_parser("assign", help="Assign a ticket")
     assign.add_argument("ticket_id", type=int, help="Ticket ID")
     assign.add_argument("-a", "--assignee", required=True, help="Assignee entity slug")
+    assign.add_argument("-o", "--operator", help="Operator entity slug")
     assign.set_defaults(func=cmd_ticket_assign)
 
     # ticket unassign
     unassign = p_create_sub.add_parser("unassign", help="Unassign a ticket")
     unassign.add_argument("ticket_id", type=int, help="Ticket ID")
+    unassign.add_argument("-o", "--operator", help="Operator entity slug")
     unassign.set_defaults(func=cmd_ticket_unassign)
 
     # ticket transition
     transition = p_create_sub.add_parser("transition", help="Transition ticket state")
     transition.add_argument("ticket_id", type=int, help="Ticket ID")
     transition.add_argument("-s", "--state", required=True, help="Target state slug")
+    transition.add_argument("-o", "--operator", help="Operator entity slug")
     transition.set_defaults(func=cmd_ticket_transition)
 
     # ticket set-priority
     set_priority = p_create_sub.add_parser("set-priority", help="Set ticket priority")
     set_priority.add_argument("ticket_id", type=int, help="Ticket ID")
     set_priority.add_argument("-p", "--priority", required=True, help="Priority slug")
+    set_priority.add_argument("-o", "--operator", help="Operator entity slug")
     set_priority.set_defaults(func=cmd_ticket_set_priority)
 
     # ticket set-category
     set_category = p_create_sub.add_parser("set-category", help="Set ticket category")
     set_category.add_argument("ticket_id", type=int, help="Ticket ID")
     set_category.add_argument("-c", "--category", required=True, help="Category slug")
+    set_category.add_argument("-o", "--operator", help="Operator entity slug")
     set_category.set_defaults(func=cmd_ticket_set_category)
 
     # ticket remove-category
@@ -199,6 +204,7 @@ def main() -> None:
         "remove-category", help="Remove ticket category"
     )
     remove_category.add_argument("ticket_id", type=int, help="Ticket ID")
+    remove_category.add_argument("-o", "--operator", help="Operator entity slug")
     remove_category.set_defaults(func=cmd_ticket_remove_category)
 
     # db vacuum

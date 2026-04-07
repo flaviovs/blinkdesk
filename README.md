@@ -23,7 +23,8 @@ system.init_database()
 
 ticket = system.create_ticket(
     title="Initial setup complete",
-    description="Database initialized and ready for use"
+    description="Database initialized and ready for use",
+    operator="alice",
 )
 print(f"Created ticket #{ticket.id}: {ticket.title}")
 ```
@@ -141,25 +142,25 @@ Create, read, update - the usual CRUD operations:
 
 ```python
 # Create
-ticket = system.create_ticket("Fix the login bug")
+ticket = system.create_ticket("Fix the login bug", operator="alice")
 
 # Read
 ticket = system.get_ticket(42)
 all_tickets = system.list_tickets()
 
 # Update title/description
-updated = system.update_ticket(ticket, title="Fixed the login bug")
+updated = system.update_ticket(ticket, title="Fixed the login bug", operator="alice")
 
 # Change state
 state = system.get_state_by_slug("closed")
-transitioned = system.transition_ticket(ticket, state)
+transitioned = system.transition_ticket(ticket, state, operator="alice")
 
 # Assign
 entity = system.get_entity_by_slug("alice")
-assigned = system.assign_ticket(ticket, entity)
+assigned = system.assign_ticket(ticket, entity, operator="alice")
 
 # Add a comment
-commented = system.add_comment(ticket, entity, "This is now fixed")
+commented = system.add_comment(ticket, "This is now fixed", operator="alice")
 ```
 
 Entities and States
@@ -214,6 +215,7 @@ transitions = [
 display_prefix = "BD-"
 lock_entities = false
 default_priority = "normal"
+require_operator = false
 EOF
 
 bd -d tickets.db init schema.toml
@@ -292,11 +294,13 @@ Basics
 ```bash
 bd -d tickets.db init schema.toml    # Initialize with schema
 bd -d tickets.db ticket create --title "Bug fix"
+bd -d tickets.db ticket create --title "Bug fix" --operator alice
 bd -d tickets.db ticket list         # List tickets
 bd -d tickets.db ticket list -s open -a alice   # Filter by state/assignee
 bd -d tickets.db ticket set-category 42 -c support
 bd -d tickets.db category delete support --force
 bd -d tickets.db ticket get 42       # View ticket details
+bd -d tickets.db config set require_operator true
 ```
 
 Run `bd --help` or `bd <command> --help` for all available options.

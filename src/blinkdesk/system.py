@@ -305,7 +305,7 @@ class TicketingSystem:
         self,
         ticket_id: int,
         action: str,
-        entity: Entity | None = None,
+        operator: Entity | None = None,
         details: str | None = None,
     ) -> None:
         """Log an action for a ticket.
@@ -313,7 +313,7 @@ class TicketingSystem:
         Args:
             ticket_id: ID of the ticket.
             action: Action performed.
-            entity: Entity that performed the action, if any.
+            operator: Operator that performed the action, if any.
             details: Additional details about the action.
         """
         now = datetime.now(timezone.utc).isoformat()
@@ -333,12 +333,44 @@ class TicketingSystem:
             (
                 ticket_id,
                 log_id,
-                entity.entity_id if entity else None,
+                operator.entity_id if operator else None,
                 action,
                 details,
                 now,
             ),
         )
+
+    def _resolve_operator(
+        self,
+        operator: str | None,
+        operation: str,
+    ) -> Entity | None:
+        """Resolve and validate an operator for ticket mutation operations.
+
+        Args:
+            operator: Operator entity slug or None.
+            operation: Operation name used in error messages.
+
+        Returns:
+            The resolved entity or None when optional and omitted.
+
+        Raises:
+            ValueError: If an operator slug is unknown or operator is required.
+        """
+        resolved_operator: Entity | None = None
+        if operator is not None:
+            resolved_operator = self.get_entity_by_slug(operator)
+            if resolved_operator is None:
+                raise ValueError(f"Operator not found: {operator}")
+
+        if self.require_operator and resolved_operator is None:
+            raise ValueError(f"Operator is required for operation: {operation}")
+
+        return resolved_operator
+
+    def _operator_slug(self, operator: Entity | None) -> str:
+        """Return a human-friendly slug for an operator in logger messages."""
+        return operator.slug if operator is not None else "*anonymous*"
 
     def create_ticket(
         self,
@@ -346,6 +378,7 @@ class TicketingSystem:
         description: str | None = None,
         priority: TicketPriority | None = None,
         category: Category | None = None,
+        operator: str | None = None,
     ) -> Ticket:
         """Create a new ticket.
 
@@ -354,6 +387,7 @@ class TicketingSystem:
             description: Optional description of the ticket.
             priority: Optional priority (defaults to "normal").
             category: Optional category.
+            operator: Optional operator slug performing this mutation.
 
         Returns:
             The created Ticket.
@@ -361,6 +395,7 @@ class TicketingSystem:
         Raises:
             ValueError: If no states are defined in the system.
         """
+        operator_entity = self._resolve_operator(operator, operation="create_ticket")
         states = self._state_machine.get_all_states()
         if not states:
             raise ValueError("No states defined in the system")
@@ -394,8 +429,13 @@ class TicketingSystem:
             last_id = cursor.lastrowid
             if last_id is None:
                 raise ValueError("Failed to create ticket")
-            self._log_ticket(last_id, TicketLogAction.CREATED)
-        logger.info("Created ticket #%d: %s", last_id, title)
+            self._log_ticket(last_id, TicketLogAction.CREATED, operator=operator_entity)
+        logger.info(
+            "Created ticket #%d: %s (%s)",
+            last_id,
+            title,
+            self._operator_slug(operator_entity),
+        )
         return Ticket(
             id=last_id,
             title=title,
@@ -458,18 +498,29 @@ class TicketingSystem:
         cursor = self._conn.execute(query, params)
         return [self._ticket_from_row(row) for row in cursor.fetchall()]
 
-    def update_ticket(self, ticket: Ticket, title: str) -> Ticket:
+    def update_ticket(
+        self,
+        ticket: Ticket,
+        title: str,
+        operator: str | None = None,
+    ) -> Ticket:
         """Update a ticket's title.
 
         Args:
             ticket: Ticket to update.
             title: New title.
+            operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        operator_entity = self._resolve_operator(operator, operation="update_ticket")
         if title == ticket.title:
-            logger.warning("Ticket #%d title unchanged (same as current)", ticket.id)
+            logger.warning(
+                "Ticket #%d title unchanged (same as current) (%s)",
+                ticket.id,
+                self._operator_slug(operator_entity),
+            )
             return ticket
         now = datetime.now(timezone.utc).isoformat()
         with self._conn:
@@ -483,21 +534,36 @@ class TicketingSystem:
             self._log_ticket(
                 ticket.id,
                 TicketLogAction.UPDATED,
+                operator=operator_entity,
                 details=f"title changed from '{ticket.title}' to '{title}'",
             )
-        logger.info("Updated ticket #%d", ticket.id)
+        logger.info(
+            "Updated ticket #%d (%s)",
+            ticket.id,
+            self._operator_slug(operator_entity),
+        )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
-    def set_ticket_priority(self, ticket: Ticket, priority: TicketPriority) -> Ticket:
+    def set_ticket_priority(
+        self,
+        ticket: Ticket,
+        priority: TicketPriority,
+        operator: str | None = None,
+    ) -> Ticket:
         """Set a ticket's priority.
 
         Args:
             ticket: Ticket to update.
             priority: New priority.
+            operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        operator_entity = self._resolve_operator(
+            operator,
+            operation="set_ticket_priority",
+        )
         now = datetime.now(timezone.utc).isoformat()
         with self._conn:
             self._conn.execute(
@@ -510,21 +576,37 @@ class TicketingSystem:
             self._log_ticket(
                 ticket.id,
                 TicketLogAction.UPDATED,
+                operator=operator_entity,
                 details=f"priority changed to {priority.slug}",
             )
-        logger.info("Set priority of ticket #%d to %s", ticket.id, priority.slug)
+        logger.info(
+            "Set priority of ticket #%d to %s (%s)",
+            ticket.id,
+            priority.slug,
+            self._operator_slug(operator_entity),
+        )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
-    def set_ticket_category(self, ticket: Ticket, category: Category) -> Ticket:
+    def set_ticket_category(
+        self,
+        ticket: Ticket,
+        category: Category,
+        operator: str | None = None,
+    ) -> Ticket:
         """Set a ticket's category.
 
         Args:
             ticket: Ticket to update.
             category: New category.
+            operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        operator_entity = self._resolve_operator(
+            operator,
+            operation="set_ticket_category",
+        )
         now = datetime.now(timezone.utc).isoformat()
         old_slug = ticket.category.slug if ticket.category else "(none)"
         with self._conn:
@@ -538,20 +620,35 @@ class TicketingSystem:
             self._log_ticket(
                 ticket.id,
                 TicketLogAction.UPDATED,
+                operator=operator_entity,
                 details=f"category: {old_slug} => {category.slug}",
             )
-        logger.info("Set category of ticket #%d to %s", ticket.id, category.slug)
+        logger.info(
+            "Set category of ticket #%d to %s (%s)",
+            ticket.id,
+            category.slug,
+            self._operator_slug(operator_entity),
+        )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
-    def remove_ticket_category(self, ticket: Ticket) -> Ticket:
+    def remove_ticket_category(
+        self,
+        ticket: Ticket,
+        operator: str | None = None,
+    ) -> Ticket:
         """Remove a ticket's category.
 
         Args:
             ticket: Ticket to update.
+            operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        operator_entity = self._resolve_operator(
+            operator,
+            operation="remove_ticket_category",
+        )
         old_slug = ticket.category.slug if ticket.category else "(none)"
         now = datetime.now(timezone.utc).isoformat()
         with self._conn:
@@ -565,21 +662,33 @@ class TicketingSystem:
             self._log_ticket(
                 ticket.id,
                 TicketLogAction.UPDATED,
+                operator=operator_entity,
                 details=f"category: {old_slug} => (none)",
             )
-        logger.info("Removed category from ticket #%d", ticket.id)
+        logger.info(
+            "Removed category from ticket #%d (%s)",
+            ticket.id,
+            self._operator_slug(operator_entity),
+        )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
-    def assign_ticket(self, ticket: Ticket, entity: Entity) -> Ticket:
+    def assign_ticket(
+        self,
+        ticket: Ticket,
+        entity: Entity,
+        operator: str | None = None,
+    ) -> Ticket:
         """Assign a ticket to an entity.
 
         Args:
             ticket: Ticket to assign.
             entity: Entity to assign the ticket to.
+            operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        operator_entity = self._resolve_operator(operator, operation="assign_ticket")
         now = datetime.now(timezone.utc).isoformat()
         with self._conn:
             self._conn.execute(
@@ -592,21 +701,32 @@ class TicketingSystem:
             self._log_ticket(
                 ticket.id,
                 TicketLogAction.ASSIGNED,
-                entity,
+                operator_entity,
                 f"assigned to {entity.slug}",
             )
-        logger.info("Assigned ticket #%d to %s", ticket.id, entity.slug)
+        logger.info(
+            "Assigned ticket #%d to %s (%s)",
+            ticket.id,
+            entity.slug,
+            self._operator_slug(operator_entity),
+        )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
-    def unassign_ticket(self, ticket: Ticket) -> Ticket:
+    def unassign_ticket(
+        self,
+        ticket: Ticket,
+        operator: str | None = None,
+    ) -> Ticket:
         """Unassign a ticket.
 
         Args:
             ticket: Ticket to unassign.
+            operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
         """
+        operator_entity = self._resolve_operator(operator, operation="unassign_ticket")
         now = datetime.now(timezone.utc).isoformat()
         with self._conn:
             self._conn.execute(
@@ -616,14 +736,23 @@ class TicketingSystem:
                 """,
                 (now, ticket.id),
             )
-            self._log_ticket(ticket.id, TicketLogAction.UNASSIGNED)
-        logger.info("Unassigned ticket #%d", ticket.id)
+            self._log_ticket(
+                ticket.id,
+                TicketLogAction.UNASSIGNED,
+                operator=operator_entity,
+            )
+        logger.info(
+            "Unassigned ticket #%d (%s)",
+            ticket.id,
+            self._operator_slug(operator_entity),
+        )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
     def _transition_ticket_no_commit(
         self,
         ticket: Ticket,
         new_state: TicketState,
+        operator: Entity | None = None,
     ) -> None:
         """Transition a ticket to a new state without committing."""
         allowed = self._state_machine.get_allowed_transitions(ticket.state)
@@ -648,15 +777,22 @@ class TicketingSystem:
         self._log_ticket(
             ticket.id,
             TicketLogAction.STATE_CHANGED,
+            operator=operator,
             details=f"{ticket.state.slug} -> {new_state.slug}",
         )
 
-    def transition_ticket(self, ticket: Ticket, new_state: TicketState) -> Ticket:
+    def transition_ticket(
+        self,
+        ticket: Ticket,
+        new_state: TicketState,
+        operator: str | None = None,
+    ) -> Ticket:
         """Transition a ticket to a new state.
 
         Args:
             ticket: Ticket to transition.
             new_state: Target state.
+            operator: Optional operator slug performing this mutation.
 
         Returns:
             The updated Ticket.
@@ -664,13 +800,20 @@ class TicketingSystem:
         Raises:
             ValueError: If the transition is not allowed.
         """
+        operator_entity = self._resolve_operator(
+            operator,
+            operation="transition_ticket",
+        )
         with self._conn:
-            self._transition_ticket_no_commit(ticket, new_state)
+            self._transition_ticket_no_commit(
+                ticket, new_state, operator=operator_entity
+            )
         logger.info(
-            "Transitioned ticket #%d: %s -> %s",
+            "Transitioned ticket #%d: %s -> %s (%s)",
             ticket.id,
             ticket.state.slug,
             new_state.slug,
+            self._operator_slug(operator_entity),
         )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
@@ -711,24 +854,29 @@ class TicketingSystem:
     def add_comment(
         self,
         ticket: Ticket,
-        entity: Entity,
         comment: str,
         new_state: TicketState | None = None,
+        operator: str | None = None,
     ) -> Ticket:
         """Add a comment to a ticket.
 
         Args:
             ticket: Ticket to comment on.
-            entity: Entity adding the comment.
             comment: Comment text.
             new_state: Optional new state to transition to.
+            operator: Operator slug of who is adding the comment.
 
         Returns:
             The updated Ticket.
         """
+        operator_entity = self._resolve_operator(operator, operation="add_comment")
         with self._conn:
             if new_state is not None:
-                self._transition_ticket_no_commit(ticket, new_state)
+                self._transition_ticket_no_commit(
+                    ticket,
+                    new_state,
+                    operator=operator_entity,
+                )
 
             now = datetime.now(timezone.utc).isoformat()
             cursor = self._conn.execute(
@@ -747,13 +895,17 @@ class TicketingSystem:
                 (
                     ticket.id,
                     comment_id,
-                    entity.entity_id,
+                    operator_entity.entity_id if operator_entity else None,
                     comment,
                     new_state.state_id if new_state else None,
                     now,
                 ),
             )
-        logger.info("Added comment to ticket #%d", ticket.id)
+        logger.info(
+            "Added comment to ticket #%d (%s)",
+            ticket.id,
+            self._operator_slug(operator_entity),
+        )
         return self.get_ticket(ticket.id)  # type: ignore[return-value]
 
     def get_ticket_comments(self, ticket: Ticket) -> list[Comment]:
@@ -902,6 +1054,16 @@ class TicketingSystem:
         """
         value = self.get_config("display_prefix")
         return value if value else ""
+
+    @property
+    def require_operator(self) -> bool:
+        """Check whether ticket mutations require an operator.
+
+        Returns:
+            True when ticket mutation calls must provide an operator.
+        """
+        value = self.get_config("require_operator")
+        return value == "true"
 
     def format_ticket_id(self, ticket_id: int) -> str:
         """Format a ticket ID with the display prefix.

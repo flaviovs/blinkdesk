@@ -176,3 +176,29 @@ default_priority = \"normal\"
             self.assertEqual(categories, 0)
         finally:
             conn.close()
+
+    def test_require_operator_defaults_to_false(self) -> None:
+        init_db(self.db_path)
+
+        seed_db_from_dict(
+            self.db_path,
+            {
+                "schema": {
+                    "entities": ["alice"],
+                    "states": ["open"],
+                    "priorities": ["normal"],
+                    "categories": [],
+                    "transitions": [{"from": "open", "to": "open"}],
+                },
+                "options": {"default_priority": "normal"},
+            },
+        )
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            value = conn.execute(
+                "SELECT value FROM config WHERE key = 'require_operator'"
+            ).fetchone()[0]
+            self.assertEqual(value, "false")
+        finally:
+            conn.close()

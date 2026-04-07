@@ -31,6 +31,13 @@ def cmd_config_set(args: argparse.Namespace) -> None:
             if priority is None:
                 print(f"Invalid priority: {args.value}", file=sys.stderr)
                 raise SystemExit(1)
+        if args.key in {"lock_entities", "require_operator"}:
+            if args.value not in {"true", "false"}:
+                print(
+                    f"Invalid boolean value for {args.key}: {args.value}",
+                    file=sys.stderr,
+                )
+                raise SystemExit(1)
         system.set_config(args.key, args.value)
         print(f"Config set: {args.key} = {args.value}")
     finally:

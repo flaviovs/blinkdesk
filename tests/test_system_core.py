@@ -332,6 +332,72 @@ class TestSystemCore(BlinkDeskTestCase):
         system.set_config("lock_entities", "false")
         self.assertFalse(system.lock_entities)
 
+    def test_require_operator_property(self) -> None:
+        data = {
+            "states": ["open"],
+            "options": {"require_operator": "true"},
+        }
+        system = self._init_system(data)
+        self.assertTrue(system.require_operator)
+
+        system.set_config("require_operator", "false")
+        self.assertFalse(system.require_operator)
+
+    def test_create_ticket_requires_operator_when_enabled(self) -> None:
+        data = {
+            "states": ["open"],
+            "options": {"require_operator": "true"},
+        }
+        system = self._init_system(data)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Operator is required for operation: create_ticket",
+        ):
+            system.create_ticket("Needs operator")
+
+    def test_create_ticket_with_unknown_operator_slug_fails(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        with self.assertRaisesRegex(ValueError, "Operator not found: ghost"):
+            system.create_ticket("Needs known operator", operator="ghost")
+
+    def test_ticket_mutation_logs_include_operator_slug(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        operator = system.get_entity_by_slug("alice")
+        assert operator is not None
+
+        with self.assertLogs("blinkdesk.system", level="INFO") as cm:
+            ticket = system.create_ticket("Test", operator=operator.slug)
+
+        logs = system.get_ticket_logs(ticket)
+        self.assertEqual(logs[0].entity, operator)
+        self.assertTrue(any("(alice)" in msg for msg in cm.output))
+
+    def test_add_comment_uses_operator_as_comment_author(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+            "options": {"require_operator": "true"},
+        }
+        system = self._init_system(data)
+        author = system.get_entity_by_slug("alice")
+        assert author is not None
+
+        ticket = system.create_ticket("Test", operator=author.slug)
+        updated = system.add_comment(ticket, "hello", operator=author.slug)
+        comments = system.get_ticket_comments(updated)
+
+        self.assertEqual(len(comments), 1)
+        self.assertEqual(comments[0].entity, author)
+
     def test_add_and_get_comment(self) -> None:
         data = {
             "entities": ["alice"],
@@ -342,7 +408,7 @@ class TestSystemCore(BlinkDeskTestCase):
         assert entity is not None
 
         ticket = system.create_ticket("Test")
-        system.add_comment(ticket, entity, "This is a comment")
+        system.add_comment(ticket, "This is a comment", operator=entity.slug)
 
         comments = system.get_ticket_comments(ticket)
         self.assertEqual(len(comments), 1)
@@ -365,7 +431,12 @@ class TestSystemCore(BlinkDeskTestCase):
         closed = system.get_state_machine().get_state_by_slug("closed")
         assert closed is not None
 
-        system.add_comment(ticket, entity, "Closing ticket", new_state=closed)
+        system.add_comment(
+            ticket,
+            "Closing ticket",
+            new_state=closed,
+            operator=entity.slug,
+        )
 
         comments = system.get_ticket_comments(ticket)
         self.assertEqual(len(comments), 1)
@@ -453,7 +524,12 @@ class TestSystemCore(BlinkDeskTestCase):
         ticket = system.create_ticket("Test")
         with patch.object(system, "_log_ticket", side_effect=RuntimeError("boom")):
             with self.assertRaises(RuntimeError):
-                system.add_comment(ticket, entity, "Closing ticket", new_state=closed)
+                system.add_comment(
+                    ticket,
+                    "Closing ticket",
+                    new_state=closed,
+                    operator=entity.slug,
+                )
 
         refreshed = system.get_ticket(ticket.id)
         assert refreshed is not None
