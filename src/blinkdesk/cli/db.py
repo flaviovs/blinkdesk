@@ -5,9 +5,8 @@ import os
 import sqlite3
 import sys
 
-from blinkdesk import init_db
 from ._helpers import _get_database_path
-from blinkdesk.init import seed_db_from_toml
+from blinkdesk.init import init_db, seed_db_from_toml
 
 
 _AUTO_VACUUM_MODE_TO_VALUE = {

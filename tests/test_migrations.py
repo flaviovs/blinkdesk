@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import blinkdesk.migrate as migrate_module
 from blinkdesk._db import CURRENT_SCHEMA_VERSION
-from blinkdesk import init_db
+from blinkdesk.init import init_db
 from blinkdesk.init import seed_db_from_dict
 from tests._base import BlinkDeskTestCase
 

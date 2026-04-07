@@ -1,7 +1,7 @@
 import os
 import sqlite3
 
-from blinkdesk import init_db
+from blinkdesk.init import init_db
 from blinkdesk.init import seed_db_from_dict, seed_db_from_toml
 from tests._base import BlinkDeskTestCase
 

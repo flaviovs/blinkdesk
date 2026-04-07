@@ -3,7 +3,7 @@ import io
 import sqlite3
 from contextlib import redirect_stdout
 
-from blinkdesk import init_db
+from blinkdesk.init import init_db
 from blinkdesk.cli.db import cmd_db_get_journal_mode, cmd_db_set_journal_mode
 from tests._base import BlinkDeskTestCase
 

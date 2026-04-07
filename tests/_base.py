@@ -3,7 +3,8 @@ import tempfile
 import unittest
 from typing import Any
 
-from blinkdesk import TicketingSystem, init_db
+from blinkdesk import TicketingSystem
+from blinkdesk.init import init_db
 from blinkdesk.init import seed_db_from_dict
 
 
