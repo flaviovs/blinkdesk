@@ -1003,6 +1003,125 @@ class TestCliTicket(BlinkDeskTestCase):
         self.assertEqual(args.host, "127.0.0.1")
         self.assertEqual(args.port, 8123)
 
+    def test_cli_main_writes_info_logs_to_log_file(self) -> None:
+        schema_path = os.path.join(self.temp_dir, "schema.toml")
+        with open(schema_path, "w", encoding="utf-8") as f:
+            f.write(
+                "[schema]\n"
+                'entities = ["seed"]\n'
+                'states = ["open"]\n'
+                'priorities = ["normal"]\n'
+                'transitions = [{ from = "open", to = "open" }]\n'
+            )
+
+        log_path = os.path.join(self.temp_dir, "bd.log")
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "--log-file",
+                log_path,
+                "-d",
+                self.db_path,
+                "init",
+                schema_path,
+            ],
+        ):
+            cli_main()
+
+        with open(log_path, "r", encoding="utf-8") as f:
+            log_output = f.read()
+
+        self.assertIn("blinkdesk.init:", log_output)
+        self.assertRegex(log_output, r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}")
+        os.remove(schema_path)
+        os.remove(log_path)
+
+    def test_cli_main_uses_log_file_from_environment(self) -> None:
+        schema_path = os.path.join(self.temp_dir, "schema-env.toml")
+        with open(schema_path, "w", encoding="utf-8") as f:
+            f.write(
+                "[schema]\n"
+                'entities = ["seed"]\n'
+                'states = ["open"]\n'
+                'priorities = ["normal"]\n'
+                'transitions = [{ from = "open", to = "open" }]\n'
+            )
+        log_path = os.path.join(self.temp_dir, "env.log")
+
+        with patch.dict("os.environ", {"BLINKDESK_LOG_FILE": log_path}, clear=False):
+            with patch(
+                "sys.argv",
+                ["bd", "-d", self.db_path, "init", schema_path],
+            ):
+                cli_main()
+
+        with open(log_path, "r", encoding="utf-8") as f:
+            log_output = f.read()
+
+        self.assertIn("blinkdesk.init:", log_output)
+        os.remove(schema_path)
+        os.remove(log_path)
+
+    def test_cli_main_prefers_log_file_flag_over_environment(self) -> None:
+        schema_path = os.path.join(self.temp_dir, "schema-override.toml")
+        with open(schema_path, "w", encoding="utf-8") as f:
+            f.write(
+                "[schema]\n"
+                'entities = ["seed"]\n'
+                'states = ["open"]\n'
+                'priorities = ["normal"]\n'
+                'transitions = [{ from = "open", to = "open" }]\n'
+            )
+        env_log_path = os.path.join(self.temp_dir, "env.log")
+        arg_log_path = os.path.join(self.temp_dir, "arg.log")
+
+        with patch.dict(
+            "os.environ", {"BLINKDESK_LOG_FILE": env_log_path}, clear=False
+        ):
+            with patch(
+                "sys.argv",
+                [
+                    "bd",
+                    "--log-file",
+                    arg_log_path,
+                    "-d",
+                    self.db_path,
+                    "init",
+                    schema_path,
+                ],
+            ):
+                cli_main()
+
+        self.assertFalse(os.path.exists(env_log_path))
+        with open(arg_log_path, "r", encoding="utf-8") as f:
+            log_output = f.read()
+
+        self.assertIn("blinkdesk.init:", log_output)
+        os.remove(schema_path)
+        os.remove(arg_log_path)
+
+    def test_cli_main_fails_when_log_file_cannot_be_opened(self) -> None:
+        err = io.StringIO()
+        bad_log_path = os.path.join(self.temp_dir, "missing", "bd.log")
+        with self.assertRaises(SystemExit):
+            with patch(
+                "sys.argv",
+                [
+                    "bd",
+                    "--log-file",
+                    bad_log_path,
+                    "-d",
+                    self.db_path,
+                    "ticket",
+                    "list",
+                ],
+            ):
+                with redirect_stderr(err):
+                    cli_main()
+
+        self.assertIn("cannot open log file", err.getvalue().lower())
+
     def test_cli_error_mentions_short_and_long_database_flags(self) -> None:
         err = io.StringIO()
         with self.assertRaises(SystemExit):

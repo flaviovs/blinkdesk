@@ -61,6 +61,8 @@ CLI
 bd -d tickets.db ticket create --title "Test"
 bd -d tickets.db ticket create --title "Test" --assignee alice
 bd -d tickets.db ticket list
+bd --log-file blinkdesk.log -d tickets.db ticket list
+BLINKDESK_LOG_FILE=blinkdesk.log bd -d tickets.db ticket list
 ```
 
 ---

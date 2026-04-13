@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 import sys
 
 from .config import (
@@ -97,6 +98,10 @@ def main() -> None:
         "--verbose",
         action="store_true",
         help="Enable verbose (INFO) logging",
+    )
+    parser.add_argument(
+        "--log-file",
+        help="Write logs to a file (or use BLINKDESK_LOG_FILE)",
     )
     parser.add_argument(
         "-d",
@@ -427,15 +432,30 @@ def main() -> None:
     add_mcp_subparser(subparsers)
 
     args = parser.parse_args()
+    log_file = args.log_file or os.environ.get("BLINKDESK_LOG_FILE")
 
     log_level = logging.INFO if args.verbose else logging.WARNING
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(name)s: %(message)s",
-        force=True,
-    )
-    for handler in logging.getLogger().handlers:
-        handler.setLevel(log_level)
+    root_logger = logging.getLogger()
+    for handler in list(root_logger.handlers):
+        root_logger.removeHandler(handler)
+        handler.close()
+    root_logger.setLevel(logging.INFO)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(log_level)
+    stream_handler.setFormatter(logging.Formatter("%(name)s: %(message)s"))
+    root_logger.addHandler(stream_handler)
+
+    if log_file:
+        try:
+            file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        except OSError as exc:
+            parser.error(f"Cannot open log file '{log_file}': {exc}")
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s %(name)s: %(message)s")
+        )
+        root_logger.addHandler(file_handler)
 
     try:
         args.func(args)

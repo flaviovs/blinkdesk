@@ -13,6 +13,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 - Add grouped ticket counts by assignee entity with optional state filter across Python API (`list_ticket_counts_by_entity`), CLI (`bd ticket count-by-entity`), and MCP (`count_tickets_by_entity`)
 - Add category-on-create support for tickets in CLI (`bd ticket create -c/--category`) and MCP (`create_ticket(category=...)`) to match the existing Python API (`category_slug`)
 - Add assignee-on-create support for tickets across Python API (`assignee_slug`), CLI (`bd ticket create -a/--assignee`), and MCP (`create_ticket(assignee=...)`)
+- Add `--log-file` to `bd` (with `BLINKDESK_LOG_FILE` fallback) so CLI logs are written to a file with timestamps
 
 ### Fixed
 
