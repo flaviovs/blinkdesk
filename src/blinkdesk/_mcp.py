@@ -364,20 +364,6 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             system.close()
 
     @mcp.tool()
-    def add_category(slug: str) -> dict[str, Any]:
-        """Use when creating a new ticket category in the ticket tracking
-        system. Categories are optional labels that group tickets."""
-        system = TicketingSystem(database_path)
-        try:
-            category = system.create_category(slug)
-            return {
-                "id": category.category_id,
-                "slug": category.slug,
-            }
-        finally:
-            system.close()
-
-    @mcp.tool()
     def list_categories() -> list[dict[str, Any]]:
         """Use when you need all ticket categories. Returns id and slug for
         each category."""
@@ -385,21 +371,6 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         try:
             categories = system.list_categories()
             return [{"id": c.category_id, "slug": c.slug} for c in categories]
-        finally:
-            system.close()
-
-    @mcp.tool()
-    def delete_category(slug: str) -> dict[str, Any]:
-        """Use when deleting a category by slug. Fails if tickets still use
-        the category."""
-        system = TicketingSystem(database_path)
-        try:
-            deleted = system.delete_category(slug)
-            if not deleted:
-                raise ValueError(
-                    f"Cannot delete category '{slug}': tickets still use it"
-                )
-            return {"deleted": True, "slug": slug}
         finally:
             system.close()
 

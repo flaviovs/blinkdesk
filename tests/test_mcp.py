@@ -197,6 +197,7 @@ class TestMcp(BlinkDeskTestCase):
     def test_mcp_category_tools_and_set_ticket_category(self) -> None:
         data = {
             "states": ["open"],
+            "categories": ["support"],
         }
         system = self._init_system(data)
         ticket = system.create_ticket("Initial")
@@ -230,22 +231,17 @@ class TestMcp(BlinkDeskTestCase):
             },
         ):
             mcp = create_mcp_server(self.db_path)
-            add_category = mcp.tools["add_category"]
             list_categories = mcp.tools["list_categories"]
-            delete_category = mcp.tools["delete_category"]
             set_ticket_category = mcp.tools["set_ticket_category"]
 
-            created = add_category("support")
-            self.assertEqual(created["slug"], "support")
+            self.assertNotIn("add_category", mcp.tools)
+            self.assertNotIn("delete_category", mcp.tools)
 
             categories = list_categories()
             self.assertEqual([c["slug"] for c in categories], ["support"])
 
             updated = set_ticket_category(ticket.id, "support")
             self.assertEqual(updated["category"], "support")
-
-            with self.assertRaises(ValueError):
-                delete_category("support")
 
     def test_mcp_ticket_create_operator_enforcement(self) -> None:
         data = {

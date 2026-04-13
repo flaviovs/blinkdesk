@@ -8,9 +8,9 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
+### Removed
 
-- No unreleased changes
+- **BC BREAK** Remove `add_category` and `delete_category` MCP tools (use schema init to create categories)
 
 ## [0.8.0] - 2026-04-07
 
