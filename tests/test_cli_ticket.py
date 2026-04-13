@@ -1186,6 +1186,65 @@ class TestCliTicket(BlinkDeskTestCase):
 
         self.assertIn("Category not found: ghost", err.getvalue())
 
+    def test_cli_ticket_create_accepts_assignee(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        out = io.StringIO()
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "create",
+                "-t",
+                "With assignee",
+                "-a",
+                "alice",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        created = system.get_ticket(1)
+        assert created is not None
+        assert created.assignee is not None
+        self.assertEqual(created.assignee.slug, "alice")
+        self.assertIn("Ticket created:", out.getvalue())
+
+    def test_cli_ticket_create_fails_for_unknown_assignee(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        self._init_system(data)
+
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with patch(
+                "sys.argv",
+                [
+                    "bd",
+                    "-d",
+                    self.db_path,
+                    "ticket",
+                    "create",
+                    "-t",
+                    "Unknown assignee",
+                    "-a",
+                    "ghost",
+                ],
+            ):
+                with redirect_stderr(err):
+                    cli_main()
+
+        self.assertIn("Assignee not found: ghost", err.getvalue())
+
     def test_cli_ticket_create_fails_without_operator_when_required(self) -> None:
         data = {
             "entities": ["alice"],

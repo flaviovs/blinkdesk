@@ -25,6 +25,7 @@ def cmd_ticket_create(args: argparse.Namespace) -> None:
             args.description,
             priority_slug=args.priority,
             category_slug=args.category,
+            assignee_slug=args.assignee,
             operator=args.operator,
         )
         ticket_id = system.format_ticket_id(ticket.id)

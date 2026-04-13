@@ -55,6 +55,28 @@ class TestSystemCore(BlinkDeskTestCase):
         self.assertIsNotNone(fetched)
         self.assertEqual(fetched.title, "Test ticket")
 
+    def test_create_ticket_accepts_assignee(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        ticket = system.create_ticket("Assigned at create", assignee_slug="alice")
+
+        assert ticket.assignee is not None
+        self.assertEqual(ticket.assignee.slug, "alice")
+
+    def test_create_ticket_fails_for_unknown_assignee(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        with self.assertRaisesRegex(ValueError, "Assignee not found: ghost"):
+            system.create_ticket("Unknown assignee", assignee_slug="ghost")
+
     def test_update_ticket(self) -> None:
         data = {
             "states": ["open", "closed"],

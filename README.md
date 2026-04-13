@@ -24,6 +24,7 @@ system.init_database()
 ticket = system.create_ticket(
     title="Initial setup complete",
     description="Database initialized and ready for use",
+    assignee_slug="alice",
     operator="alice",
 )
 print(f"Created ticket #{ticket.id}: {ticket.title}")
@@ -58,6 +59,7 @@ CLI
 
 ```bash
 bd -d tickets.db ticket create --title "Test"
+bd -d tickets.db ticket create --title "Test" --assignee alice
 bd -d tickets.db ticket list
 ```
 
@@ -142,7 +144,11 @@ Create, read, update - the usual CRUD operations:
 
 ```python
 # Create
-ticket = system.create_ticket("Fix the login bug", operator="alice")
+ticket = system.create_ticket(
+    "Fix the login bug",
+    assignee_slug="alice",
+    operator="alice",
+)
 
 # Read
 ticket = system.get_ticket(42)
@@ -308,6 +314,7 @@ Basics
 bd -d tickets.db init schema.toml    # Initialize with schema
 bd -d tickets.db ticket create --title "Bug fix"
 bd -d tickets.db ticket create --title "Bug fix" --category support
+bd -d tickets.db ticket create --title "Bug fix" --assignee alice
 bd -d tickets.db ticket create --title "Bug fix" --operator alice
 bd -d tickets.db ticket list         # List tickets
 bd -d tickets.db ticket list -s open -a alice -p high -c support   # Filter by state/assignee/priority/category

@@ -463,6 +463,7 @@ class TicketingSystem:
         description: str | None = None,
         priority_slug: str | None = None,
         category_slug: str | None = None,
+        assignee_slug: str | None = None,
         operator: str | None = None,
     ) -> Ticket:
         """Create a new ticket.
@@ -472,6 +473,7 @@ class TicketingSystem:
             description: Optional description of the ticket.
             priority_slug: Optional priority slug (defaults to "normal").
             category_slug: Optional category slug.
+            assignee_slug: Optional assignee entity slug.
             operator: Optional operator slug performing this mutation.
 
         Returns:
@@ -498,6 +500,10 @@ class TicketingSystem:
         if category_slug is not None:
             category = self._require_category_slug(category_slug)
 
+        assignee: Entity | None = None
+        if assignee_slug is not None:
+            assignee = self._require_entity_slug(assignee_slug, context="Assignee")
+
         initial_state = states[0]
         now = datetime.now(timezone.utc).isoformat()
         with self._conn:
@@ -507,13 +513,14 @@ class TicketingSystem:
                     title, description, state_id, priority_id,
                     assignee_entity_id, category_id, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, NULL, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     title,
                     description,
                     initial_state.state_id,
                     priority.priority_id,
+                    assignee.entity_id if assignee else None,
                     category.category_id if category else None,
                     now,
                     now,
@@ -535,7 +542,7 @@ class TicketingSystem:
             description=description,
             state=initial_state,
             priority=priority,
-            assignee=None,
+            assignee=assignee,
             category=category,
             created_at=datetime.fromisoformat(now),
             updated_at=datetime.fromisoformat(now),
