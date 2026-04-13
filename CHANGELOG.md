@@ -14,6 +14,10 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 - Add category-on-create support for tickets in CLI (`bd ticket create -c/--category`) and MCP (`create_ticket(category=...)`) to match the existing Python API (`category_slug`)
 - Add assignee-on-create support for tickets across Python API (`assignee_slug`), CLI (`bd ticket create -a/--assignee`), and MCP (`create_ticket(assignee=...)`)
 
+### Fixed
+
+- Treat blank or whitespace-padded `operator` values as missing/trimmed across ticket mutations so MCP `create_ticket` no longer fails with "Operator not found" due to empty or padded input
+
 ### Removed
 
 - **BC BREAK** Remove `add_category` and `delete_category` MCP tools (use schema init to create categories)

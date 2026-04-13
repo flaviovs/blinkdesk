@@ -567,6 +567,48 @@ class TestSystemCore(BlinkDeskTestCase):
         with self.assertRaisesRegex(ValueError, "Operator not found: ghost"):
             system.create_ticket("Needs known operator", operator="ghost")
 
+    def test_create_ticket_with_blank_operator_is_treated_as_missing(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        ticket = system.create_ticket("Blank operator", operator="   ")
+        logs = system.get_ticket_logs(ticket.id)
+
+        self.assertEqual(ticket.title, "Blank operator")
+        self.assertEqual(len(logs), 1)
+        self.assertIsNone(logs[0].entity)
+
+    def test_create_ticket_with_blank_operator_fails_when_required(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+            "options": {"require_operator": True},
+        }
+        system = self._init_system(data)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Operator is required for operation: create_ticket",
+        ):
+            system.create_ticket("Needs non-blank operator", operator="")
+
+    def test_create_ticket_with_padded_operator_slug_is_trimmed(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        ticket = system.create_ticket("Padded operator", operator="  alice  ")
+        logs = system.get_ticket_logs(ticket.id)
+
+        self.assertEqual(ticket.title, "Padded operator")
+        self.assertEqual(len(logs), 1)
+        self.assertIsNotNone(logs[0].entity)
+        self.assertEqual(logs[0].entity.slug, "alice")
+
     def test_ticket_mutation_logs_include_operator_slug(self) -> None:
         data = {
             "entities": ["alice"],

@@ -351,6 +351,131 @@ class TestMcp(BlinkDeskTestCase):
             created = create_ticket("With operator", operator="alice")
             self.assertEqual(created["title"], "With operator")
 
+    def test_mcp_ticket_create_blank_operator_is_treated_as_missing(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            create_ticket = mcp.tools["create_ticket"]
+            created = create_ticket("Blank operator", operator="   ")
+
+        self.assertEqual(created["title"], "Blank operator")
+
+    def test_mcp_ticket_create_blank_operator_fails_when_required(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+            "options": {"require_operator": True},
+        }
+        system = self._init_system(data)
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            create_ticket = mcp.tools["create_ticket"]
+            with self.assertRaisesRegex(
+                ValueError,
+                "Operator is required for operation: create_ticket",
+            ):
+                create_ticket("Needs operator", operator="")
+
+    def test_mcp_ticket_create_with_padded_operator_slug(self) -> None:
+        data = {
+            "entities": ["alice"],
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            create_ticket = mcp.tools["create_ticket"]
+            created = create_ticket("Trimmed operator", operator="  alice  ")
+
+        self.assertEqual(created["title"], "Trimmed operator")
+
     def test_mcp_ticket_create_accepts_category(self) -> None:
         data = {
             "states": ["open"],

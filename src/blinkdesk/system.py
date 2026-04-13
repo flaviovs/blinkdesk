@@ -407,6 +407,11 @@ class TicketingSystem:
         Raises:
             ValueError: If an operator slug is unknown or operator is required.
         """
+        if operator is not None:
+            operator = operator.strip()
+            if operator == "":
+                operator = None
+
         resolved_operator: Entity | None = None
         if operator is not None:
             resolved_operator = self.get_entity_by_slug(operator)
