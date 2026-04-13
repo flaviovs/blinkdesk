@@ -95,6 +95,32 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
         system.close()
 
 
+def cmd_ticket_count_by_entity(args: argparse.Namespace) -> None:
+    """List ticket counts grouped by entity."""
+    db_path = _get_database_path(args)
+    system = TicketingSystem(db_path)
+    try:
+        counts = system.list_ticket_counts_by_entity(state_slug=args.state)
+        if args.output_format == "json":
+            _format_json(counts)
+            return
+
+        if not counts:
+            print("No tickets found.")
+            return
+
+        print(f"{'Entity':<20} {'Count'}")
+        print("-" * 28)
+        for row in counts:
+            entity = row["entity"] if row["entity"] is not None else "-"
+            print(f"{entity:<20} {row['ticket_count']}")
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+    finally:
+        system.close()
+
+
 def cmd_ticket_get(args: argparse.Namespace) -> None:
     """Get a ticket by ID."""
     db_path = _get_database_path(args)

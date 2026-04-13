@@ -107,6 +107,17 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             system.close()
 
     @mcp.tool()
+    def count_tickets_by_entity(state: str | None = None) -> list[dict[str, Any]]:
+        """Use when you need ticket workload totals grouped by assignee entity
+        in the ticket tracking system. Optionally filter by state slug. Includes
+        an unassigned bucket only when there are unassigned tickets."""
+        system = TicketingSystem(database_path)
+        try:
+            return system.list_ticket_counts_by_entity(state_slug=state)
+        finally:
+            system.close()
+
+    @mcp.tool()
     def create_ticket(
         title: str,
         description: str | None = None,

@@ -8,6 +8,10 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Add grouped ticket counts by assignee entity with optional state filter across Python API (`list_ticket_counts_by_entity`), CLI (`bd ticket count-by-entity`), and MCP (`count_tickets_by_entity`)
+
 ### Removed
 
 - **BC BREAK** Remove `add_category` and `delete_category` MCP tools (use schema init to create categories)

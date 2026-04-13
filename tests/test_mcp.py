@@ -8,6 +8,66 @@ from tests._base import BlinkDeskTestCase
 
 
 class TestMcp(BlinkDeskTestCase):
+    def test_count_tickets_by_entity_tool(self) -> None:
+        data = {
+            "entities": ["alice", "bob"],
+            "states": ["open", "closed"],
+            "transitions": [{"from": "open", "to": "closed"}],
+        }
+        system = self._init_system(data)
+        alice_open = system.create_ticket("Alice open")
+        alice_closed = system.create_ticket("Alice closed")
+        system.create_ticket("Unassigned")
+        system.assign_ticket(alice_open.id, "alice")
+        system.assign_ticket(alice_closed.id, "alice")
+        system.transition_ticket(alice_closed.id, "closed")
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            count_tickets_by_entity = mcp.tools["count_tickets_by_entity"]
+
+            counts = count_tickets_by_entity()
+            closed_counts = count_tickets_by_entity(state="closed")
+
+        self.assertEqual(
+            counts,
+            [
+                {"entity_id": 1, "entity": "alice", "ticket_count": 2},
+                {"entity_id": None, "entity": None, "ticket_count": 1},
+            ],
+        )
+        self.assertEqual(
+            closed_counts,
+            [{"entity_id": 1, "entity": "alice", "ticket_count": 1}],
+        )
+
     def test_mcp_not_found_uses_display_prefix(self) -> None:
         data = {
             "states": ["open"],

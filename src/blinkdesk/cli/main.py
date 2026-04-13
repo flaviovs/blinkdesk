@@ -44,6 +44,7 @@ from .state import (
 from .ticket import (
     cmd_ticket_assign,
     cmd_ticket_comment,
+    cmd_ticket_count_by_entity,
     cmd_ticket_create,
     cmd_ticket_get,
     cmd_ticket_list,
@@ -152,6 +153,24 @@ def main() -> None:
         help="Maximum number of tickets to return",
     )
     lst.set_defaults(func=cmd_ticket_list)
+
+    # ticket count-by-entity
+    count_by_entity = p_create_sub.add_parser(
+        "count-by-entity",
+        help="Count tickets grouped by entity",
+    )
+    count_by_entity.add_argument(
+        "-f",
+        "--output-format",
+        choices=["json", "table"],
+        default="table",
+    )
+    count_by_entity.add_argument(
+        "-s",
+        "--state",
+        help="Filter by state slug (e.g., open, closed)",
+    )
+    count_by_entity.set_defaults(func=cmd_ticket_count_by_entity)
 
     # ticket get
     get = p_create_sub.add_parser("get", help="Get a ticket")

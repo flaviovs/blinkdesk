@@ -304,6 +304,66 @@ class TestSystemCore(BlinkDeskTestCase):
         ):
             system.list_tickets(limit=0)
 
+    def test_list_ticket_counts_by_entity(self) -> None:
+        data = {
+            "entities": ["alice", "bob"],
+            "states": ["open", "closed"],
+            "transitions": [{"from": "open", "to": "closed"}],
+        }
+        system = self._init_system(data)
+
+        alice_open = system.create_ticket("Alice open")
+        alice_closed = system.create_ticket("Alice closed")
+        bob_open = system.create_ticket("Bob open")
+        system.create_ticket("Unassigned")
+
+        system.assign_ticket(alice_open.id, "alice")
+        system.assign_ticket(alice_closed.id, "alice")
+        system.transition_ticket(alice_closed.id, "closed")
+        system.assign_ticket(bob_open.id, "bob")
+
+        counts = system.list_ticket_counts_by_entity()
+        self.assertEqual(
+            counts,
+            [
+                {"entity_id": 1, "entity": "alice", "ticket_count": 2},
+                {"entity_id": 2, "entity": "bob", "ticket_count": 1},
+                {"entity_id": None, "entity": None, "ticket_count": 1},
+            ],
+        )
+
+    def test_list_ticket_counts_by_entity_with_state_filter(self) -> None:
+        data = {
+            "entities": ["alice", "bob"],
+            "states": ["open", "closed"],
+            "transitions": [{"from": "open", "to": "closed"}],
+        }
+        system = self._init_system(data)
+
+        alice_open = system.create_ticket("Alice open")
+        alice_closed = system.create_ticket("Alice closed")
+        bob_open = system.create_ticket("Bob open")
+
+        system.assign_ticket(alice_open.id, "alice")
+        system.assign_ticket(alice_closed.id, "alice")
+        system.transition_ticket(alice_closed.id, "closed")
+        system.assign_ticket(bob_open.id, "bob")
+
+        counts = system.list_ticket_counts_by_entity(state_slug="closed")
+        self.assertEqual(
+            counts,
+            [{"entity_id": 1, "entity": "alice", "ticket_count": 1}],
+        )
+
+    def test_list_ticket_counts_by_entity_rejects_unknown_state(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        system = self._init_system(data)
+
+        with self.assertRaisesRegex(ValueError, "Unknown state: missing"):
+            system.list_ticket_counts_by_entity(state_slug="missing")
+
     def test_close(self) -> None:
         data = {
             "states": ["open", "closed"],

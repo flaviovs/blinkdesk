@@ -9,6 +9,7 @@ from blinkdesk.cli.main import main as cli_main
 from blinkdesk.cli.ticket import (
     cmd_ticket_assign,
     cmd_ticket_comment,
+    cmd_ticket_count_by_entity,
     cmd_ticket_get,
     cmd_ticket_list,
     cmd_ticket_remove_category,
@@ -21,6 +22,89 @@ from tests._base import BlinkDeskTestCase
 
 
 class TestCliTicket(BlinkDeskTestCase):
+    def test_ticket_count_by_entity_json(self) -> None:
+        data = {
+            "entities": ["alice", "bob"],
+            "states": ["open", "closed"],
+            "transitions": [{"from": "open", "to": "closed"}],
+        }
+        system = self._init_system(data)
+        alice_open = system.create_ticket("Alice open")
+        alice_closed = system.create_ticket("Alice closed")
+        system.create_ticket("Unassigned")
+        system.assign_ticket(alice_open.id, "alice")
+        system.assign_ticket(alice_closed.id, "alice")
+        system.transition_ticket(alice_closed.id, "closed")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            output_format="json",
+            state=None,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_count_by_entity(args)
+        output = json.loads(out.getvalue())
+
+        self.assertEqual(output[0]["entity"], "alice")
+        self.assertEqual(output[0]["ticket_count"], 2)
+        self.assertEqual(output[1]["entity"], None)
+        self.assertEqual(output[1]["ticket_count"], 1)
+
+    def test_cli_ticket_count_by_entity_supports_state_filter(self) -> None:
+        data = {
+            "entities": ["alice", "bob"],
+            "states": ["open", "closed"],
+            "transitions": [{"from": "open", "to": "closed"}],
+        }
+        system = self._init_system(data)
+        alice_open = system.create_ticket("Alice open")
+        alice_closed = system.create_ticket("Alice closed")
+        system.assign_ticket(alice_open.id, "alice")
+        system.assign_ticket(alice_closed.id, "alice")
+        system.transition_ticket(alice_closed.id, "closed")
+
+        out = io.StringIO()
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "count-by-entity",
+                "--output-format",
+                "json",
+                "--state",
+                "closed",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        output = json.loads(out.getvalue())
+        self.assertEqual(
+            output, [{"entity_id": 1, "entity": "alice", "ticket_count": 1}]
+        )
+
+    def test_ticket_count_by_entity_fails_for_invalid_state(self) -> None:
+        data = {
+            "states": ["open"],
+        }
+        self._init_system(data)
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            output_format="table",
+            state="missing",
+        )
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with redirect_stderr(err):
+                cmd_ticket_count_by_entity(args)
+
+        self.assertIn("Unknown state: missing", err.getvalue())
+
     def test_ticket_list_table(self) -> None:
         data = {
             "entities": ["alice"],

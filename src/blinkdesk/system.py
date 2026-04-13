@@ -622,6 +622,53 @@ class TicketingSystem:
         cursor = self._conn.execute(query, params)
         return [self._ticket_from_row(row) for row in cursor.fetchall()]
 
+    def list_ticket_counts_by_entity(
+        self,
+        state_slug: str | None = None,
+    ) -> list[dict[str, int | str | None]]:
+        """List ticket counts grouped by assignee entity.
+
+        Args:
+            state_slug: Optional state slug to filter by.
+
+        Returns:
+            A list of grouped counts. Each row includes entity_id,
+            entity (slug), and ticket_count. Unassigned tickets are represented
+            with entity_id/entity as None and only appear when nonzero.
+
+        Raises:
+            ValueError: If state_slug is provided but does not exist.
+        """
+        query = (
+            "SELECT e.entity_id, e.slug AS entity, COUNT(t.ticket_id) "
+            "AS ticket_count "
+            "FROM tickets t "
+            "LEFT JOIN entities e ON t.assignee_entity_id = e.entity_id"
+        )
+        params: list[int] = []
+
+        if state_slug:
+            query += " WHERE t.state_id = ?"
+            params.append(self._require_state_slug(state_slug).state_id)
+
+        query += (
+            " GROUP BY t.assignee_entity_id, e.entity_id, e.slug"
+            " ORDER BY ticket_count DESC,"
+            " CASE WHEN e.slug IS NULL THEN 1 ELSE 0 END,"
+            " e.slug ASC,"
+            " e.entity_id ASC"
+        )
+
+        cursor = self._conn.execute(query, params)
+        return [
+            {
+                "entity_id": row["entity_id"],
+                "entity": row["entity"],
+                "ticket_count": row["ticket_count"],
+            }
+            for row in cursor.fetchall()
+        ]
+
     def update_ticket(
         self,
         ticket_id: int,
