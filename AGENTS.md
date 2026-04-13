@@ -118,7 +118,9 @@ bd -d mydb.db mcp stdio
   ```
   ## [Unreleased]
 
-  - No unreleased changes
+  ### {Added/Changed/Etc.}
+
+  - ...
 
   ## [0.4.0] - 2026-04-02
 
