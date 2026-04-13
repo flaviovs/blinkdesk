@@ -122,18 +122,20 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
         title: str,
         description: str | None = None,
         priority: str = "normal",
+        category: str | None = None,
         operator: str | None = None,
     ) -> dict[str, Any]:
         """Use when creating a new issue ticket in the ticket tracking system.
-        Title is required, description optional. Priority defaults to 'normal'.
-        New tickets start in 'open' state with no assignee. Returns the created
-        ticket with ID."""
+        Title is required, description optional. Priority defaults to 'normal',
+        and category is optional. New tickets start in 'open' state with no
+        assignee. Returns the created ticket with ID."""
         system = TicketingSystem(database_path)
         try:
             ticket = system.create_ticket(
                 title,
                 description,
                 priority_slug=priority,
+                category_slug=category,
                 operator=operator,
             )
             return {

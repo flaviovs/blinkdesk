@@ -1127,6 +1127,65 @@ class TestCliTicket(BlinkDeskTestCase):
 
         self.assertIn("Ticket created:", out.getvalue())
 
+    def test_cli_ticket_create_accepts_category(self) -> None:
+        data = {
+            "states": ["open"],
+            "categories": ["support"],
+        }
+        system = self._init_system(data)
+
+        out = io.StringIO()
+        with patch(
+            "sys.argv",
+            [
+                "bd",
+                "-d",
+                self.db_path,
+                "ticket",
+                "create",
+                "-t",
+                "With category",
+                "-c",
+                "support",
+            ],
+        ):
+            with redirect_stdout(out):
+                cli_main()
+
+        created = system.get_ticket(1)
+        assert created is not None
+        assert created.category is not None
+        self.assertEqual(created.category.slug, "support")
+        self.assertIn("Ticket created:", out.getvalue())
+
+    def test_cli_ticket_create_fails_for_unknown_category(self) -> None:
+        data = {
+            "states": ["open"],
+            "categories": ["support"],
+        }
+        self._init_system(data)
+
+        err = io.StringIO()
+        with self.assertRaises(SystemExit):
+            with patch(
+                "sys.argv",
+                [
+                    "bd",
+                    "-d",
+                    self.db_path,
+                    "ticket",
+                    "create",
+                    "-t",
+                    "Unknown category",
+                    "-c",
+                    "ghost",
+                ],
+            ):
+                with redirect_stderr(err):
+                    cli_main()
+
+        self.assertIn("Category not found: ghost", err.getvalue())
+
     def test_cli_ticket_create_fails_without_operator_when_required(self) -> None:
         data = {
             "entities": ["alice"],

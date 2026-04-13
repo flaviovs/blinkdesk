@@ -121,6 +121,7 @@ def main() -> None:
     create.add_argument(
         "-p", "--priority", default="normal", help="Priority slug (default: normal)"
     )
+    create.add_argument("-c", "--category", help="Category slug")
     create.add_argument("-o", "--operator", help="Operator entity slug")
     create.set_defaults(func=cmd_ticket_create)
 

@@ -351,6 +351,88 @@ class TestMcp(BlinkDeskTestCase):
             created = create_ticket("With operator", operator="alice")
             self.assertEqual(created["title"], "With operator")
 
+    def test_mcp_ticket_create_accepts_category(self) -> None:
+        data = {
+            "states": ["open"],
+            "categories": ["support"],
+        }
+        system = self._init_system(data)
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            create_ticket = mcp.tools["create_ticket"]
+            created = create_ticket("With category", category="support")
+
+        self.assertEqual(created["title"], "With category")
+        self.assertEqual(created["category"], "support")
+
+    def test_mcp_ticket_create_fails_for_unknown_category(self) -> None:
+        data = {
+            "states": ["open"],
+            "categories": ["support"],
+        }
+        system = self._init_system(data)
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            create_ticket = mcp.tools["create_ticket"]
+            with self.assertRaisesRegex(ValueError, "Category not found: ghost"):
+                create_ticket("Unknown category", category="ghost")
+
     def test_mcp_comment_and_history_use_operator_field(self) -> None:
         data = {
             "entities": ["alice"],

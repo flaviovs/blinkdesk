@@ -273,7 +273,11 @@ Example Conversations
 **Creating a ticket:**
 > "Can you create a ticket for the login bug?"
 > ```python
-> ticket_create(title="Login bug", description="Users can't log in after the latest update")
+> ticket_create(
+>     title="Login bug",
+>     description="Users can't log in after the latest update",
+>     category="support",
+> )
 > ```
 
 **Updating state:**
@@ -303,6 +307,7 @@ Basics
 ```bash
 bd -d tickets.db init schema.toml    # Initialize with schema
 bd -d tickets.db ticket create --title "Bug fix"
+bd -d tickets.db ticket create --title "Bug fix" --category support
 bd -d tickets.db ticket create --title "Bug fix" --operator alice
 bd -d tickets.db ticket list         # List tickets
 bd -d tickets.db ticket list -s open -a alice -p high -c support   # Filter by state/assignee/priority/category
