@@ -1,6 +1,7 @@
 import argparse
 import io
 import json
+import logging
 import os
 from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
@@ -1225,6 +1226,42 @@ class TestCliTicket(BlinkDeskTestCase):
                     cli_main()
 
         self.assertIn("cannot open log file", err.getvalue().lower())
+
+    def test_cli_main_suppresses_mcp_lowlevel_info_without_verbose(self) -> None:
+        system = self._init_system({})
+        system.close()
+
+        mcp_lowlevel_logger = logging.getLogger("mcp.server.lowlevel.server")
+        previous_level = mcp_lowlevel_logger.level
+        try:
+            with patch(
+                "sys.argv",
+                ["bd", "-d", self.db_path, "ticket", "list"],
+            ):
+                with redirect_stdout(io.StringIO()):
+                    cli_main()
+
+            self.assertEqual(mcp_lowlevel_logger.level, logging.WARNING)
+        finally:
+            mcp_lowlevel_logger.setLevel(previous_level)
+
+    def test_cli_main_keeps_mcp_lowlevel_info_with_verbose(self) -> None:
+        system = self._init_system({})
+        system.close()
+
+        mcp_lowlevel_logger = logging.getLogger("mcp.server.lowlevel.server")
+        previous_level = mcp_lowlevel_logger.level
+        try:
+            with patch(
+                "sys.argv",
+                ["bd", "-v", "-d", self.db_path, "ticket", "list"],
+            ):
+                with redirect_stdout(io.StringIO()):
+                    cli_main()
+
+            self.assertEqual(mcp_lowlevel_logger.level, logging.INFO)
+        finally:
+            mcp_lowlevel_logger.setLevel(previous_level)
 
     def test_cli_error_mentions_short_and_long_database_flags(self) -> None:
         err = io.StringIO()

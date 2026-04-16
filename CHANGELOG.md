@@ -14,7 +14,7 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Fixed
 
-- No unreleased changes.
+- Reduce startup log noise by moving migration up-to-date checks to debug level and suppressing MCP low-level request logs unless `bd --verbose` is used
 
 ## [0.9.0] - 2026-04-12
 

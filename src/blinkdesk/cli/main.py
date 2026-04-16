@@ -455,11 +455,15 @@ def main() -> None:
     log_file = args.log_file or os.environ.get("BLINKDESK_LOG_FILE")
 
     log_level = logging.INFO if args.verbose else logging.WARNING
+    mcp_lowlevel_log_level = logging.INFO if args.verbose else logging.WARNING
     root_logger = logging.getLogger()
     for handler in list(root_logger.handlers):
         root_logger.removeHandler(handler)
         handler.close()
     root_logger.setLevel(logging.INFO)
+
+    mcp_lowlevel_logger = logging.getLogger("mcp.server.lowlevel.server")
+    mcp_lowlevel_logger.setLevel(mcp_lowlevel_log_level)
 
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(log_level)

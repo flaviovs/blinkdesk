@@ -69,7 +69,7 @@ class TestMigrations(BlinkDeskTestCase):
         conn = sqlite3.connect(self.db_path)
         try:
             conn.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
-            with self.assertLogs("blinkdesk.migrate", level="INFO") as cm:
+            with self.assertLogs("blinkdesk.migrate", level="DEBUG") as cm:
                 migrate_module.run_migrations(conn)
 
             self.assertTrue(

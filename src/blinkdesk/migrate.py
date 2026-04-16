@@ -108,7 +108,7 @@ def run_migrations(conn: sqlite3.Connection) -> None:
     """
     db_version = get_schema_version(conn)
     target = CURRENT_SCHEMA_VERSION
-    logger.info("Checking migrations: current=%d target=%d", db_version, target)
+    logger.debug("Checking migrations: current=%d target=%d", db_version, target)
 
     if db_version > target:
         raise RuntimeError(
@@ -126,4 +126,4 @@ def run_migrations(conn: sqlite3.Connection) -> None:
             logger.info("Applied migration v%d -> v%d", from_ver, db_version)
 
     if db_version == target:
-        logger.info("Database schema is up to date at v%d", db_version)
+        logger.debug("Database schema is up to date at v%d", db_version)
