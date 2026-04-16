@@ -13,6 +13,7 @@ from blinkdesk.cli.ticket import (
     cmd_ticket_get,
     cmd_ticket_list,
     cmd_ticket_remove_category,
+    cmd_ticket_search,
     cmd_ticket_set_category,
     cmd_ticket_set_priority,
     cmd_ticket_transition,
@@ -322,6 +323,109 @@ class TestCliTicket(BlinkDeskTestCase):
         self.assertEqual(len(output), 1)
         self.assertEqual(output[0]["title"], "Support ticket")
         self.assertEqual(output[0]["category"], "support")
+
+    def test_ticket_search_table(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        system.create_ticket("Login error message")
+        system.create_ticket("Password reset issue")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            query="login",
+            output_format="table",
+            include_comments=False,
+            limit=None,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_search(args)
+        output = out.getvalue()
+
+        self.assertIn("Login error message", output)
+        self.assertNotIn("Password reset issue", output)
+
+    def test_ticket_search_json(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        system.create_ticket("Login error message")
+        system.create_ticket("Password reset issue")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            query="login",
+            output_format="json",
+            include_comments=False,
+            limit=None,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_search(args)
+        output = json.loads(out.getvalue())
+
+        self.assertEqual(len(output), 1)
+        self.assertEqual(output[0]["title"], "Login error message")
+
+    def test_ticket_search_with_include_comments(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        ticket = system.create_ticket("Bug report")
+        system.add_comment(ticket.id, "This is a helpful comment")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            query="helpful",
+            output_format="json",
+            include_comments=True,
+            limit=None,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_search(args)
+        output = json.loads(out.getvalue())
+
+        self.assertEqual(len(output), 1)
+        self.assertEqual(output[0]["title"], "Bug report")
+
+    def test_ticket_search_no_results(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        system.create_ticket("Some ticket")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            query="nonexistent",
+            output_format="table",
+            include_comments=False,
+            limit=None,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_search(args)
+        output = out.getvalue()
+
+        self.assertIn("No tickets found", output)
+
+    def test_ticket_search_with_limit(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        system.create_ticket("Error one")
+        system.create_ticket("Error two")
+        system.create_ticket("Error three")
+
+        args = argparse.Namespace(
+            database_path=self.db_path,
+            query="error",
+            output_format="json",
+            include_comments=False,
+            limit=2,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            cmd_ticket_search(args)
+        output = json.loads(out.getvalue())
+
+        self.assertEqual(len(output), 2)
 
     def test_ticket_get_table_includes_logs_and_comments(self) -> None:
         data = {

@@ -681,6 +681,120 @@ class TicketingSystem:
             for row in cursor.fetchall()
         ]
 
+    def search_tickets(
+        self,
+        query: str,
+        limit: int | None = None,
+        include_comments: bool = False,
+    ) -> list[Ticket]:
+        """Search tickets by text in title, description, and optionally comments.
+
+        Args:
+            query: Search query. All words must match (AND logic).
+            limit: Optional maximum number of results to return.
+            include_comments: When True, also search in ticket comments.
+
+        Returns:
+            List of matching tickets ordered by relevance (title matches first,
+            then description matches, then comment matches).
+
+        Raises:
+            ValueError: If limit is less than 1.
+        """
+        if limit is not None and limit < 1:
+            raise ValueError("limit must be greater than or equal to 1")
+
+        words = query.strip().split()
+        if not words:
+            return []
+
+        like_params = [f"%{w}%" for w in words]
+
+        title_conds = " AND ".join(["LOWER(title) LIKE LOWER(?)" for _ in words])
+        desc_conds = " AND ".join(["LOWER(description) LIKE LOWER(?)" for _ in words])
+
+        title_and_desc_conds = " AND ".join(
+            [
+                "(LOWER(title) LIKE LOWER(?) OR LOWER(description) LIKE LOWER(?))"
+                for _ in words
+            ]
+        )
+
+        title_query = f"""
+            SELECT t.ticket_id, 0 AS relevance
+            FROM tickets t
+            WHERE {title_conds}
+        """
+        desc_query = f"""
+            SELECT t.ticket_id, 1 AS relevance
+            FROM tickets t
+            WHERE {desc_conds}
+        """
+        title_or_desc_query = f"""
+            SELECT t.ticket_id, 2 AS relevance
+            FROM tickets t
+            WHERE {title_and_desc_conds}
+        """
+        union_query = (
+            title_query
+            + " UNION ALL "
+            + desc_query
+            + " UNION ALL "
+            + title_or_desc_query
+        )
+
+        if include_comments:
+            comment_conds = " AND ".join(
+                ["LOWER(comment) LIKE LOWER(?)" for _ in words]
+            )
+            comment_query = f"""
+                SELECT DISTINCT t.ticket_id, 3 AS relevance
+                FROM tickets t
+                JOIN comments c ON t.ticket_id = c.ticket_id
+                WHERE {comment_conds}
+            """
+            union_query += " UNION ALL " + comment_query
+
+        union_query += " ORDER BY relevance, ticket_id"
+
+        if limit is not None:
+            union_query += " LIMIT ?"
+
+        params: list[str | int] = list(like_params)  # title params
+        params += list(like_params)  # description params
+        # title OR description params: for each word, need title and desc
+        for w in words:
+            params.append(f"%{w}%")  # title
+            params.append(f"%{w}%")  # description
+        if include_comments:
+            params += like_params  # comment params
+        if limit is not None:
+            params.append(limit)
+
+        cursor = self._conn.execute(union_query, params)
+        ticket_ids = [row["ticket_id"] for row in cursor.fetchall()]
+        ticket_ids = list(
+            dict.fromkeys(ticket_ids)
+        )  # Remove duplicates, preserve order
+
+        if not ticket_ids:
+            return []
+
+        placeholders = ",".join(["?" for _ in ticket_ids])
+        case_parts = " ".join(
+            f"WHEN {tid} THEN {i}" for i, tid in enumerate(ticket_ids)
+        )
+        tickets_query = f"""
+            {_TICKET_SELECT_QUERY}
+            WHERE t.ticket_id IN ({placeholders})
+            ORDER BY
+                CASE t.ticket_id
+                    {case_parts}
+                END
+        """
+        cursor = self._conn.execute(tickets_query, ticket_ids)
+        return [self._ticket_from_row(row) for row in cursor.fetchall()]
+
     def update_ticket(
         self,
         ticket_id: int,

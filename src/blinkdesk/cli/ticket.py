@@ -97,6 +97,47 @@ def cmd_ticket_list(args: argparse.Namespace) -> None:
         system.close()
 
 
+def cmd_ticket_search(args: argparse.Namespace) -> None:
+    """Search tickets by text."""
+    db_path = _get_database_path(args)
+    system = TicketingSystem(db_path)
+    try:
+        tickets = system.search_tickets(
+            args.query,
+            limit=args.limit,
+            include_comments=args.include_comments,
+        )
+        prefix = system.display_prefix
+        data = [
+            {
+                "id": t.id,
+                "title": t.title,
+                "state": t.state.slug,
+                "priority": t.priority.slug,
+                "assignee": t.assignee.slug if t.assignee else None,
+                "category": t.category.slug if t.category else None,
+                "created_at": t.created_at.isoformat(),
+                "updated_at": t.updated_at.isoformat(),
+                "description": t.description,
+            }
+            for t in tickets
+        ]
+        if args.output_format == "json":
+            if prefix:
+                data = [{**d, "id": f"{prefix}{d['id']}"} for d in data]
+            _format_json(data)
+        else:
+            if not tickets:
+                print("No tickets found.")
+            else:
+                _format_table(data, prefix=prefix)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+    finally:
+        system.close()
+
+
 def cmd_ticket_count_by_entity(args: argparse.Namespace) -> None:
     """List ticket counts grouped by entity."""
     db_path = _get_database_path(args)

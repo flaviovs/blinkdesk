@@ -254,6 +254,100 @@ class TestMcp(BlinkDeskTestCase):
             tickets = find_tickets(priority="high", category="support")
             self.assertEqual([t["title"] for t in tickets], ["Support"])
 
+    def test_search_tickets_tool(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        system.create_ticket("Login error message")
+        system.create_ticket("Password reset issue")
+        system.create_ticket("Dashboard loads slow")
+        system.create_ticket("Error with password login")
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            search_tickets = mcp.tools["search_tickets"]
+
+            results = search_tickets("login")
+            self.assertEqual(len(results), 2)
+            self.assertEqual(
+                {r["title"] for r in results},
+                {"Login error message", "Error with password login"},
+            )
+
+            results = search_tickets("error password")
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0]["title"], "Error with password login")
+
+    def test_search_tickets_with_include_comments(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        ticket = system.create_ticket("Bug report")
+        system.add_comment(ticket.id, "This is a helpful comment")
+        system.close()
+
+        fake_mcp = types.ModuleType("mcp")
+        fake_server = types.ModuleType("mcp.server")
+        fake_fastmcp = types.ModuleType("mcp.server.fastmcp")
+
+        class FakeFastMCP:
+            def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+                self.tools: dict[str, Any] = {}
+
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+
+                return decorator
+
+        fake_fastmcp.FastMCP = FakeFastMCP
+        fake_server.fastmcp = fake_fastmcp
+        fake_mcp.server = fake_server
+
+        with patch.dict(
+            sys.modules,
+            {
+                "mcp": fake_mcp,
+                "mcp.server": fake_server,
+                "mcp.server.fastmcp": fake_fastmcp,
+            },
+        ):
+            mcp = create_mcp_server(self.db_path)
+            search_tickets = mcp.tools["search_tickets"]
+
+            results = search_tickets("helpful", include_comments=True)
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0]["title"], "Bug report")
+
+            results = search_tickets("helpful", include_comments=False)
+            self.assertEqual(len(results), 0)
+
     def test_mcp_category_tools_and_set_ticket_category(self) -> None:
         data = {
             "states": ["open"],

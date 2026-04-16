@@ -241,34 +241,36 @@ def create_mcp_server(database_path: str, server_name: str = "BlinkDesk") -> "Fa
             system.close()
 
     @mcp.tool()
-    def search_tickets(query: str, limit: int = 20) -> list[dict[str, Any]]:
-        """Use when searching issue tickets by keyword in title or description.
-        Returns matching tickets with relevance ranking. Use for fuzzy search in
-        the ticket tracking system."""
+    def search_tickets(
+        query: str,
+        limit: int = 20,
+        include_comments: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Use when searching issue tickets by keyword in title, description,
+        or optionally comments. All words in the query must match (AND logic).
+        Results ordered by relevance (title matches first, then description,
+        then comments). Provide query string and optional limit."""
+        if limit < 1:
+            raise ValueError("limit must be greater than or equal to 1")
+
         system = TicketingSystem(database_path)
         try:
-            tickets = system.list_tickets()
-            query_lower = query.lower()
-
-            result = []
-            for ticket in tickets:
-                if query_lower in ticket.title.lower() or (
-                    ticket.description and query_lower in ticket.description.lower()
-                ):
-                    result.append(
-                        {
-                            "id": ticket.id,
-                            "title": ticket.title,
-                            "state": ticket.state.slug,
-                            "priority": ticket.priority.slug,
-                            "category": ticket.category.slug
-                            if ticket.category
-                            else None,
-                        }
-                    )
-                    if len(result) >= limit:
-                        break
-            return result
+            tickets = system.search_tickets(
+                query,
+                limit=limit,
+                include_comments=include_comments,
+            )
+            return [
+                {
+                    "id": ticket.id,
+                    "title": ticket.title,
+                    "state": ticket.state.slug,
+                    "priority": ticket.priority.slug,
+                    "assignee": ticket.assignee.slug if ticket.assignee else None,
+                    "category": ticket.category.slug if ticket.category else None,
+                }
+                for ticket in tickets
+            ]
         finally:
             system.close()
 

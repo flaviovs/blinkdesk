@@ -326,6 +326,99 @@ class TestSystemCore(BlinkDeskTestCase):
         ):
             system.list_tickets(limit=0)
 
+    def test_search_tickets_by_title(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        system.create_ticket("Login error message")
+        system.create_ticket("Password reset issue")
+        system.create_ticket("Dashboard loads slow")
+
+        results = system.search_tickets("login")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].title, "Login error message")
+
+    def test_search_tickets_by_description(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        system.create_ticket("Title one", "Some description here")
+        system.create_ticket("Title two", "Different text")
+        system.create_ticket("Title three", "Another description")
+
+        results = system.search_tickets("description")
+        self.assertEqual(len(results), 2)
+        titles = {r.title for r in results}
+        self.assertEqual(titles, {"Title one", "Title three"})
+
+    def test_search_tickets_and_logic(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        system.create_ticket("Login error", "Password failed")
+        system.create_ticket("Login success", "All good")
+        system.create_ticket("Logout issue", "Session expired")
+
+        results = system.search_tickets("login password")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].title, "Login error")
+
+    def test_search_tickets_with_comments(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        ticket = system.create_ticket("Bug report")
+        system.add_comment(ticket.id, "This is a helpful comment")
+
+        results = system.search_tickets("helpful", include_comments=True)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].title, "Bug report")
+
+    def test_search_tickets_without_comments_by_default(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        ticket = system.create_ticket("Bug report")
+        system.add_comment(ticket.id, "This is a helpful comment")
+
+        results = system.search_tickets("helpful")
+        self.assertEqual(len(results), 0)
+
+    def test_search_tickets_empty_query(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        system.create_ticket("Test ticket")
+
+        results = system.search_tickets("")
+        self.assertEqual(len(results), 0)
+
+    def test_search_tickets_limit(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        system.create_ticket("Error one")
+        system.create_ticket("Error two")
+        system.create_ticket("Error three")
+
+        results = system.search_tickets("error", limit=2)
+        self.assertEqual(len(results), 2)
+
+    def test_search_tickets_rejects_invalid_limit(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+
+        with self.assertRaisesRegex(
+            ValueError, "limit must be greater than or equal to 1"
+        ):
+            system.search_tickets("test", limit=0)
+
+    def test_search_tickets_relevance_ordering(self) -> None:
+        data = {"states": ["open"]}
+        system = self._init_system(data)
+        title_match = system.create_ticket("Login error here")
+        desc_match = system.create_ticket("Some title", "Login error in description")
+        comment_match = system.create_ticket("Another title")
+        system.add_comment(comment_match.id, "Login error in comment")
+
+        results = system.search_tickets("login error", include_comments=True)
+        self.assertEqual(len(results), 3)
+        self.assertEqual(results[0].title, "Login error here")
+        self.assertEqual(results[1].title, "Some title")
+
     def test_list_ticket_counts_by_entity(self) -> None:
         data = {
             "entities": ["alice", "bob"],

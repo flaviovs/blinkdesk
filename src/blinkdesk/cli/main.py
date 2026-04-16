@@ -50,6 +50,7 @@ from .ticket import (
     cmd_ticket_get,
     cmd_ticket_list,
     cmd_ticket_remove_category,
+    cmd_ticket_search,
     cmd_ticket_set_priority,
     cmd_ticket_set_category,
     cmd_ticket_transition,
@@ -160,6 +161,25 @@ def main() -> None:
         help="Maximum number of tickets to return",
     )
     lst.set_defaults(func=cmd_ticket_list)
+
+    # ticket search
+    search = p_create_sub.add_parser("search", help="Search tickets")
+    search.add_argument("query", help="Search query (all words must match)")
+    search.add_argument(
+        "-f", "--output-format", choices=["json", "table"], default="table"
+    )
+    search.add_argument(
+        "--include-comments",
+        action="store_true",
+        help="Also search in ticket comments",
+    )
+    search.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Maximum number of tickets to return",
+    )
+    search.set_defaults(func=cmd_ticket_search)
 
     # ticket count-by-entity
     count_by_entity = p_create_sub.add_parser(
