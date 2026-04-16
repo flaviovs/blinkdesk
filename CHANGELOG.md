@@ -8,6 +8,12 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- No unreleased changes.
+
+## [0.10.0] - 2026-04-16
+
 ### Added
 
 - Add ticket search across Python API (`search_tickets`), CLI (`bd ticket search`), and MCP (`search_tickets`) supporting textual search on title, description, and optionally comments with AND logic and relevance ordering
