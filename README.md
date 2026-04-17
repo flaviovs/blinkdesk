@@ -163,7 +163,7 @@ filtered = system.list_tickets(
     category_slug="support",
 )
 counts = system.list_ticket_counts_by_entity()
-closed_counts = system.list_ticket_counts_by_entity(state_slug="closed")
+closed_counts = system.list_ticket_counts_by_entity(state_slugs=["closed"])
 
 # Update title
 updated = system.update_ticket(ticket.id, title="Fixed the login bug", operator="alice")
@@ -271,7 +271,7 @@ What Your Agent Can Do
 | `ticket_create` | Create a new ticket |
 | `ticket_update` | Update title, description, state, or assignee |
 | `ticket_comment_add` | Add a comment to a ticket |
-| `count_tickets_by_entity` | Count tickets grouped by assignee entity, optionally filtered by state |
+| `count_tickets_by_entity` | Count tickets grouped by assignee entity, optionally filtered by states |
 | `entity_list` | List all entities (users/teams) |
 | `entity_get` | Look up an entity by slug |
 
@@ -321,7 +321,7 @@ bd -d tickets.db ticket create --title "Bug fix" --operator alice
 bd -d tickets.db ticket list         # List tickets
 bd -d tickets.db ticket list -s open -a alice -p high -c support   # Filter by state/assignee/priority/category
 bd -d tickets.db ticket list --after-id 100 --limit 25   # Cursor pagination
-bd -d tickets.db ticket count-by-entity --state open
+bd -d tickets.db ticket count-by-entity --state open --state closed
 bd -d tickets.db ticket set-category 42 -c support
 bd -d tickets.db category delete support --force
 bd -d tickets.db ticket get 42       # View ticket details

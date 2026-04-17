@@ -636,12 +636,12 @@ class TicketingSystem:
 
     def list_ticket_counts_by_entity(
         self,
-        state_slug: str | None = None,
+        state_slugs: list[str] | None = None,
     ) -> list[dict[str, int | str | None]]:
         """List ticket counts grouped by assignee entity.
 
         Args:
-            state_slug: Optional state slug to filter by.
+            state_slugs: Optional state slugs to filter by.
 
         Returns:
             A list of grouped counts. Each row includes entity_id,
@@ -649,7 +649,7 @@ class TicketingSystem:
             with entity_id/entity as None and only appear when nonzero.
 
         Raises:
-            ValueError: If state_slug is provided but does not exist.
+            ValueError: If any provided state slug does not exist.
         """
         query = (
             "SELECT e.entity_id, e.slug AS entity, COUNT(t.ticket_id) "
@@ -659,9 +659,14 @@ class TicketingSystem:
         )
         params: list[int] = []
 
-        if state_slug:
-            query += " WHERE t.state_id = ?"
-            params.append(self._require_state_slug(state_slug).state_id)
+        if state_slugs:
+            state_ids = [
+                self._require_state_slug(state_slug).state_id
+                for state_slug in state_slugs
+            ]
+            placeholders = ",".join(["?" for _ in state_ids])
+            query += f" WHERE t.state_id IN ({placeholders})"
+            params.extend(state_ids)
 
         query += (
             " GROUP BY t.assignee_entity_id, e.entity_id, e.slug"

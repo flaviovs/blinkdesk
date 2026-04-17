@@ -8,9 +8,9 @@ The project follows [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
-### Fixed
+### Changed
 
-- No unreleased changes.
+- **BC BREAK** `list_ticket_counts_by_entity`, `bd ticket count-by-entity`, and MCP `count_tickets_by_entity` now accept multiple states as an array/repeated flag (`state_slugs`/`states`/`--state ... --state ...`) instead of a single state parameter
 
 ## [0.10.0] - 2026-04-16
 

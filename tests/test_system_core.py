@@ -447,7 +447,7 @@ class TestSystemCore(BlinkDeskTestCase):
             ],
         )
 
-    def test_list_ticket_counts_by_entity_with_state_filter(self) -> None:
+    def test_list_ticket_counts_by_entity_with_state_filters(self) -> None:
         data = {
             "entities": ["alice", "bob"],
             "states": ["open", "closed"],
@@ -464,10 +464,13 @@ class TestSystemCore(BlinkDeskTestCase):
         system.transition_ticket(alice_closed.id, "closed")
         system.assign_ticket(bob_open.id, "bob")
 
-        counts = system.list_ticket_counts_by_entity(state_slug="closed")
+        counts = system.list_ticket_counts_by_entity(state_slugs=["closed", "open"])
         self.assertEqual(
             counts,
-            [{"entity_id": 1, "entity": "alice", "ticket_count": 1}],
+            [
+                {"entity_id": 1, "entity": "alice", "ticket_count": 2},
+                {"entity_id": 2, "entity": "bob", "ticket_count": 1},
+            ],
         )
 
     def test_list_ticket_counts_by_entity_rejects_unknown_state(self) -> None:
@@ -477,7 +480,7 @@ class TestSystemCore(BlinkDeskTestCase):
         system = self._init_system(data)
 
         with self.assertRaisesRegex(ValueError, "Unknown state: missing"):
-            system.list_ticket_counts_by_entity(state_slug="missing")
+            system.list_ticket_counts_by_entity(state_slugs=["missing"])
 
     def test_close(self) -> None:
         data = {

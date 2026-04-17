@@ -53,7 +53,7 @@ class TestCliTicket(BlinkDeskTestCase):
         self.assertEqual(output[1]["entity"], None)
         self.assertEqual(output[1]["ticket_count"], 1)
 
-    def test_cli_ticket_count_by_entity_supports_state_filter(self) -> None:
+    def test_cli_ticket_count_by_entity_supports_state_filters(self) -> None:
         data = {
             "entities": ["alice", "bob"],
             "states": ["open", "closed"],
@@ -79,6 +79,8 @@ class TestCliTicket(BlinkDeskTestCase):
                 "json",
                 "--state",
                 "closed",
+                "--state",
+                "open",
             ],
         ):
             with redirect_stdout(out):
@@ -86,7 +88,10 @@ class TestCliTicket(BlinkDeskTestCase):
 
         output = json.loads(out.getvalue())
         self.assertEqual(
-            output, [{"entity_id": 1, "entity": "alice", "ticket_count": 1}]
+            output,
+            [
+                {"entity_id": 1, "entity": "alice", "ticket_count": 2},
+            ],
         )
 
     def test_ticket_count_by_entity_fails_for_invalid_state(self) -> None:
@@ -98,7 +103,7 @@ class TestCliTicket(BlinkDeskTestCase):
         args = argparse.Namespace(
             database_path=self.db_path,
             output_format="table",
-            state="missing",
+            state=["missing"],
         )
         err = io.StringIO()
         with self.assertRaises(SystemExit):

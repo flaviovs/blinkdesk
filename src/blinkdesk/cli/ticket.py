@@ -143,7 +143,7 @@ def cmd_ticket_count_by_entity(args: argparse.Namespace) -> None:
     db_path = _get_database_path(args)
     system = TicketingSystem(db_path)
     try:
-        counts = system.list_ticket_counts_by_entity(state_slug=args.state)
+        counts = system.list_ticket_counts_by_entity(state_slugs=args.state)
         if args.output_format == "json":
             _format_json(counts)
             return

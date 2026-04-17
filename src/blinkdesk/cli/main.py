@@ -195,7 +195,8 @@ def main() -> None:
     count_by_entity.add_argument(
         "-s",
         "--state",
-        help="Filter by state slug (e.g., open, closed)",
+        action="append",
+        help="Filter by state slug; repeat to include multiple states",
     )
     count_by_entity.set_defaults(func=cmd_ticket_count_by_entity)
 

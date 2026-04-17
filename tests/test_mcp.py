@@ -54,7 +54,7 @@ class TestMcp(BlinkDeskTestCase):
             count_tickets_by_entity = mcp.tools["count_tickets_by_entity"]
 
             counts = count_tickets_by_entity()
-            closed_counts = count_tickets_by_entity(state="closed")
+            closed_counts = count_tickets_by_entity(states=["closed"])
 
         self.assertEqual(
             counts,
